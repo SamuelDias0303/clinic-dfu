@@ -1,0 +1,379 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function tokenRoles() {
+      return signedIn() && request.auth.token.roles is list ? request.auth.token.roles : [];
+    }
+
+    function isAdminGlobal() {
+      return signedIn()
+        && (
+          request.auth.token.admin == true
+          || tokenRoles().hasAny(['ADMIN_GLOBAL'])
+        );
+    }
+
+    function memberPath(whitelabelId) {
+      return /databases/$(database)/documents/whitelabels/$(whitelabelId)/members/$(request.auth.uid);
+    }
+
+    function memberExists(whitelabelId) {
+      return signedIn() && exists(memberPath(whitelabelId));
+    }
+
+    function memberData(whitelabelId) {
+      return get(memberPath(whitelabelId)).data;
+    }
+
+    function isActiveMember(whitelabelId) {
+      return memberExists(whitelabelId)
+        && memberData(whitelabelId).status == 'ATIVO';
+    }
+
+    function memberRoles(whitelabelId) {
+      return isActiveMember(whitelabelId) && memberData(whitelabelId).roles is list
+        ? memberData(whitelabelId).roles
+        : [];
+    }
+
+    function hasTenantRole(whitelabelId, roles) {
+      return memberRoles(whitelabelId).hasAny(roles);
+    }
+
+    function isGestor(whitelabelId) {
+      return hasTenantRole(whitelabelId, ['GESTOR']);
+    }
+
+    function isRecepcao(whitelabelId) {
+      return hasTenantRole(whitelabelId, ['REPCAO']);
+    }
+
+    function isTerapeuta(whitelabelId) {
+      return hasTenantRole(whitelabelId, ['TERAPEUTA']);
+    }
+
+    function tenantFieldIsValid(whitelabelId) {
+      return !('whitelabelId' in request.resource.data)
+        || request.resource.data.whitelabelId == whitelabelId;
+    }
+
+    function existingTenantFieldIsValid(whitelabelId) {
+      return !('whitelabelId' in resource.data)
+        || resource.data.whitelabelId == whitelabelId;
+    }
+
+    function isOwnMemberDoc(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function therapistCanAccessPatient(whitelabelId) {
+      return isTerapeuta(whitelabelId)
+        && (
+          resource.data.therapistId == request.auth.token.email
+          || resource.data.therapistId == request.auth.uid
+          || (
+            memberData(whitelabelId).therapistId is string
+            && resource.data.therapistId == memberData(whitelabelId).therapistId
+          )
+        );
+    }
+
+    function therapistCanWritePatient(whitelabelId) {
+      return isTerapeuta(whitelabelId)
+        && (
+          request.resource.data.therapistId == request.auth.token.email
+          || request.resource.data.therapistId == request.auth.uid
+          || (
+            memberData(whitelabelId).therapistId is string
+            && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+          )
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if isAdminGlobal() || isOwnMemberDoc(userId);
+      allow create, update: if isAdminGlobal() || isOwnMemberDoc(userId);
+      allow delete: if isAdminGlobal();
+    }
+
+    // Compatibilidade temporaria: a colecao legada ainda alimenta o backoffice.
+    // Remover depois que `clients` for migrada para `whitelabels`.
+    match /clients/{clientId} {
+      allow read: if isAdminGlobal() || isActiveMember(clientId);
+      allow create, delete: if isAdminGlobal();
+      allow update: if isAdminGlobal()
+        || (
+          isGestor(clientId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['settings', 'updatedAt'])
+          && request.resource.data.settings.diff(resource.data.settings).affectedKeys().hasOnly(['therapistSpecialties'])
+          && request.resource.data.settings.therapistSpecialties is list
+        );
+    }
+
+    match /invites/{inviteId} {
+      allow read: if true;
+      allow create: if isAdminGlobal()
+        || (
+          signedIn()
+          && request.resource.data.whitelabelId is string
+          && isGestor(request.resource.data.whitelabelId)
+          && request.resource.data.roles is list
+          && request.resource.data.roles.hasOnly(['REPCAO', 'TERAPEUTA'])
+        );
+      allow delete: if isAdminGlobal();
+      allow update: if isAdminGlobal()
+        || (
+          signedIn()
+          && resource.data.email == request.auth.token.email
+          && request.resource.data.email == resource.data.email
+          && request.resource.data.whitelabelId == resource.data.whitelabelId
+          && request.resource.data.roles == resource.data.roles
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedBy', 'acceptedAt', 'updatedAt'])
+          && request.resource.data.status == 'ACEITO'
+        );
+    }
+
+    // Necessario para o AuthContext carregar memberships via collectionGroup('members').
+    match /{path=**}/members/{userId} {
+      allow read: if signedIn()
+        && (
+          isAdminGlobal()
+          || userId == request.auth.uid
+          || resource.data.userId == request.auth.uid
+          || resource.data.email == request.auth.token.email
+        );
+    }
+
+    match /whitelabels/{whitelabelId} {
+      allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
+      allow create: if isAdminGlobal()
+        || (
+          signedIn()
+          && whitelabelId == 'individual_' + request.auth.uid
+          && request.resource.data.workspaceType == 'INDIVIDUAL'
+          && request.resource.data.ownerUserId == request.auth.uid
+          && request.resource.data.plan == 'Individual'
+        );
+      allow update, delete: if isAdminGlobal();
+
+      match /members/{userId} {
+        allow read: if isAdminGlobal() || isGestor(whitelabelId) || isOwnMemberDoc(userId);
+        allow create: if isAdminGlobal()
+          || (
+            signedIn()
+            && whitelabelId == 'individual_' + request.auth.uid
+            && userId == request.auth.uid
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.email == request.auth.token.email
+            && request.resource.data.status == 'ATIVO'
+            && request.resource.data.roles is list
+            && request.resource.data.roles.hasOnly(['TERAPEUTA'])
+          )
+          || (
+            isGestor(whitelabelId)
+            && request.resource.data.roles is list
+            && request.resource.data.roles.hasOnly(['REPCAO', 'TERAPEUTA'])
+          )
+          || (
+            signedIn()
+            && userId == request.auth.uid
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.email == request.auth.token.email
+            && request.resource.data.status == 'ATIVO'
+            && request.resource.data.invitationToken is string
+            && exists(/databases/$(database)/documents/invites/$(request.resource.data.invitationToken))
+            && get(/databases/$(database)/documents/invites/$(request.resource.data.invitationToken)).data.email == request.auth.token.email
+            && get(/databases/$(database)/documents/invites/$(request.resource.data.invitationToken)).data.whitelabelId == whitelabelId
+            && get(/databases/$(database)/documents/invites/$(request.resource.data.invitationToken)).data.roles == request.resource.data.roles
+          );
+        allow update: if isAdminGlobal()
+          || (
+            isGestor(whitelabelId)
+            && request.resource.data.roles is list
+            && request.resource.data.roles.hasOnly(['REPCAO', 'TERAPEUTA'])
+          )
+          || (
+            signedIn()
+            && (
+              userId == request.auth.uid
+              || resource.data.email == request.auth.token.email
+            )
+            && request.resource.data.userId == request.auth.uid
+            && request.resource.data.email == request.auth.token.email
+            && request.resource.data.status == 'ATIVO'
+            && resource.data.invitationToken is string
+            && exists(/databases/$(database)/documents/invites/$(resource.data.invitationToken))
+            && get(/databases/$(database)/documents/invites/$(resource.data.invitationToken)).data.email == request.auth.token.email
+            && get(/databases/$(database)/documents/invites/$(resource.data.invitationToken)).data.whitelabelId == whitelabelId
+            && get(/databases/$(database)/documents/invites/$(resource.data.invitationToken)).data.roles == request.resource.data.roles
+          );
+        allow delete: if isAdminGlobal()
+          || isGestor(whitelabelId)
+          || (
+            signedIn()
+            && resource.data.email == request.auth.token.email
+            && resource.data.invitationToken is string
+            && exists(/databases/$(database)/documents/invites/$(resource.data.invitationToken))
+            && get(/databases/$(database)/documents/invites/$(resource.data.invitationToken)).data.email == request.auth.token.email
+            && get(/databases/$(database)/documents/invites/$(resource.data.invitationToken)).data.whitelabelId == whitelabelId
+          );
+      }
+
+      match /patients/{patientId} {
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || therapistCanAccessPatient(whitelabelId)
+          );
+        allow create: if tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || therapistCanWritePatient(whitelabelId)
+          );
+        allow update: if existingTenantFieldIsValid(whitelabelId)
+          && tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || therapistCanWritePatient(whitelabelId)
+          );
+        allow delete: if isGestor(whitelabelId);
+      }
+
+      match /therapists/{therapistId} {
+        allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
+        allow create: if isGestor(whitelabelId)
+          || (
+            signedIn()
+            && whitelabelId == 'individual_' + request.auth.uid
+            && therapistId == request.auth.token.email
+            && request.resource.data.email == request.auth.token.email
+          );
+        allow update, delete: if isGestor(whitelabelId);
+      }
+
+      match /appointments/{appointmentId} {
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || (
+              isTerapeuta(whitelabelId)
+              && (
+                resource.data.therapistId == request.auth.token.email
+                || resource.data.therapistId == request.auth.uid
+                || (
+                  memberData(whitelabelId).therapistId is string
+                  && resource.data.therapistId == memberData(whitelabelId).therapistId
+                )
+              )
+            )
+          );
+        allow create: if tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || (
+              isTerapeuta(whitelabelId)
+              && (
+                request.resource.data.therapistId == request.auth.token.email
+                || request.resource.data.therapistId == request.auth.uid
+                || (
+                  memberData(whitelabelId).therapistId is string
+                  && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+                )
+              )
+            )
+          );
+        allow update: if existingTenantFieldIsValid(whitelabelId)
+          && tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+            || (
+              isTerapeuta(whitelabelId)
+              && (
+                request.resource.data.therapistId == request.auth.token.email
+                || request.resource.data.therapistId == request.auth.uid
+                || (
+                  memberData(whitelabelId).therapistId is string
+                  && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+                )
+              )
+            )
+          );
+        allow delete: if isGestor(whitelabelId) || isRecepcao(whitelabelId);
+      }
+
+      match /evolutions/{evolutionId} {
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isTerapeuta(whitelabelId)
+          );
+        allow create, update: if tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isTerapeuta(whitelabelId)
+          );
+        allow delete: if isGestor(whitelabelId);
+      }
+
+      match /anamneses/{anamneseId} {
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isTerapeuta(whitelabelId)
+          );
+        allow create, update: if tenantFieldIsValid(whitelabelId)
+          && (
+            isGestor(whitelabelId)
+            || isTerapeuta(whitelabelId)
+          );
+        allow delete: if isGestor(whitelabelId);
+      }
+
+      match /auditLogs/{auditLogId} {
+        allow read: if isAdminGlobal() || isGestor(whitelabelId);
+        allow create: if signedIn() && isActiveMember(whitelabelId);
+        allow update, delete: if false;
+      }
+    }
+
+    // Bloqueia colecoes globais antigas de dados sensiveis depois da migracao.
+    match /patients/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /therapists/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /appointments/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /evolutions/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /anamneses/{document=**} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
