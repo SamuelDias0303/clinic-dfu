@@ -4,6 +4,8 @@
 
 Sprint 22 em andamento: fluxo de back-office para gerenciar membros, convites e modalidades terapeuticas configuradas por whitelabel, removendo criacao direta de terapeutas fora da gestao de membros.
 
+Sprint 23 entregue em codigo: modulo `Captacao`, que recebe solicitacoes vindas de site publico e gerencia o conteudo da landing page do whitelabel. Detalhes em `docs/MODULO_CAPTACAO.md`. As regras do Firestore e do Storage NAO foram publicadas — ver Proximas Validacoes.
+
 ## Leitura Atual Da Arquitetura
 
 - `AuthContext` consulta custom claims, `users/{uid}` e memberships antes do fallback local por e-mail contendo `admin`.
@@ -52,6 +54,32 @@ Sprint 22 em andamento: fluxo de back-office para gerenciar membros, convites e 
 - Os dados globais atuais serao migrados para um whitelabel padrao ou a nova estrutura pode comecar limpa?
 
 ## Proximas Validacoes
+
+### Sprint 24 — migracao para whitelabels (CONCLUIDA em dados e codigo)
+
+- Dados clinicos migrados das colecoes globais para `whitelabels/raiza-fisio` e `whitelabels/rafaela-fisio` por `npm.cmd run migrate:whitelabels -- --apply`. Praticas separadas, uma whitelabel por profissional.
+- Copia, nao movimentacao: as colecoes globais continuam intactas como rede de seguranca. Backup em `backups/firestore-<timestamp>/` (fora do git).
+- Dados de teste (`smdb.ti@gmail.com`, `default-therapist`) ficaram de proposito para tras.
+- `AuthContext` deixou de usar `users/{uid}.roles`, o fallback de e-mail contendo `admin` e a membership virtual `legacy-default`. Papel agora vem so de custom claims e memberships — as duas fontes que `firestore.rules` reconhece.
+- `assumeLegacyManagement` removido: mandava o ADMIN_GLOBAL para as colecoes globais, que as regras bloqueiam.
+- PENDENTE: validar login de `raiza.fisio@gmail.com` e `rafaela.rafa.silveira@gmail.com` antes de publicar as regras. `admin@clinicdfu.local` passa a cair em "Acesso nao vinculado" — esperado, conta substituida por `smdb.ti@gmail.com`.
+- PENDENTE: referencias penduradas migradas junto — `evolutions/6YpHcNkFg8iQraIfHTie` e `appointments/gPuHlXR4JSm6zfp3NvkT` apontam para o paciente `0rdq45xeNlM82FO1T7yI`, apagado antes da migracao.
+
+### ADMIN_GLOBAL — bloqueador de publicacao das regras
+
+- Nenhuma conta possui custom claim de admin hoje. `firestore.rules` so reconhece `ADMIN_GLOBAL` por claim, entao publicar as regras sem rodar `npm run admin:grant` deixa o projeto sem ninguem capaz de criar whitelabel. Ver `docs/ACESSO_ADMIN_GLOBAL.md`.
+- Escalacao de privilegio pendente: `match /users/{userId}` permite que o proprio usuario grave `roles`, e o `AuthContext` confia nesse campo. Restringir `roles` a admin.
+- Escalacao de privilegio pendente: fallback de e-mail contendo `admin` concede `ADMIN_GLOBAL` na UI. Remover apos existir admin com claim.
+
+### Sprint 23 — modulo Captacao (bloqueadores antes de publicar)
+
+- `leads` e a PRIMEIRA colecao do sistema a aceitar escrita sem autenticacao. Validar `isValidLeadCreate` no emulador antes de qualquer deploy de regras.
+- Testar no emulador: anonimo cria lead valido; anonimo NAO le leads; anonimo nao cria com campo extra, string acima do limite ou `status` diferente de `NOVO`; `GESTOR` de outro whitelabel nao enxerga os leads.
+- Firebase Storage NAO esta provisionado no projeto: `firebase deploy --only storage` falha com "Firebase Storage has not been set up". Ativar no console antes de publicar `storage.rules`. Ate la, o upload de imagens do site nao funciona.
+- Publicar `storage.rules` junto com `firestore.rules` — o `firebase.json` passou a declarar Storage e um deploy parcial deixaria o bucket sem regra correspondente.
+- `firestore.rules` compila sem erro no dry-run do CLI. Isso valida sintaxe, nao comportamento: os casos de `isValidLeadCreate`, `isValidLeadTriage` e `selfProfile*` continuam pendentes de teste no emulador.
+- App Check: registrar as DUAS aplicacoes (backoffice e landing page) antes de ligar enforcement. Ligar enforcement sem registrar o backoffice derruba o app em producao.
+- Criar o whitelabel da landing page e associar o responsavel como `GESTOR` antes de apontar o site.
 
 - Seguir `docs/PLANO_PRODUCAO_ROLLBACK.md` antes de publicar as alteracoes em producao.
 - Revisar visualmente dashboard, agenda e listas em larguras pequenas e grandes.

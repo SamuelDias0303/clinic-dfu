@@ -1,0 +1,61 @@
+rules_version = '2';
+
+// Regras do Cloud Storage.
+//
+// Escopo atual: imagens do site publico de cada whitelabel.
+// Leitura publica e intencional — as imagens sao exibidas na landing page.
+// Escrita exige usuario autenticado com membership ativa no whitelabel.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function tokenRoles() {
+      return request.auth != null && request.auth.token.roles is list
+        ? request.auth.token.roles
+        : [];
+    }
+
+    function isAdminGlobal() {
+      return signedIn() && 'ADMIN_GLOBAL' in tokenRoles();
+    }
+
+    function memberData(whitelabelId) {
+      return firestore.get(
+        /databases/(default)/documents/whitelabels/$(whitelabelId)/members/$(request.auth.uid)
+      ).data;
+    }
+
+    function memberExists(whitelabelId) {
+      return signedIn() && firestore.exists(
+        /databases/(default)/documents/whitelabels/$(whitelabelId)/members/$(request.auth.uid)
+      );
+    }
+
+    function isGestor(whitelabelId) {
+      return memberExists(whitelabelId)
+        && memberData(whitelabelId).status == 'ATIVO'
+        && 'GESTOR' in memberData(whitelabelId).roles;
+    }
+
+    function isValidSiteImage() {
+      return request.resource != null
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|avif)');
+    }
+
+    match /whitelabels/{whitelabelId}/site/{fileName} {
+      allow read: if true;
+      allow write: if (isAdminGlobal() || isGestor(whitelabelId)) && isValidSiteImage();
+      allow delete: if isAdminGlobal() || isGestor(whitelabelId);
+    }
+
+    // Nada mais e acessivel por padrao.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

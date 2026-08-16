@@ -7,3 +7,11 @@ graphify-out/
 *.log
 .env*
 !.env.example
+
+# Backups do Firestore — contem dado clinico, nunca versionar.
+backups/
+
+# Chave de conta de servico do Firebase — da acesso total ao projeto.
+service-account.json
+*-service-account.json
+serviceAccountKey.json

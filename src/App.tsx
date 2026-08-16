@@ -14,6 +14,7 @@ import TherapistListView from './views/TherapistListView';
 import BackofficeView from './views/BackofficeView';
 import ClinicalRecordView from './views/ClinicalRecordView';
 import AiResourcesView from './views/AiResourcesView';
+import CaptacaoView from './views/CaptacaoView';
 import { UserRole, View, Patient } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -21,11 +22,11 @@ import { Loader2 } from 'lucide-react';
 
 import { therapistService } from './services/therapistService';
 
-const TENANT_PRODUCT_VIEWS: View[] = ['DASHBOARD', 'AGENDA', 'PACIENTES', 'TERAPEUTAS', 'PRONTUARIO'];
+const TENANT_PRODUCT_VIEWS: View[] = ['DASHBOARD', 'AGENDA', 'PACIENTES', 'TERAPEUTAS', 'PRONTUARIO', 'CAPTACAO'];
 const ADMIN_GLOBAL_VIEWS: View[] = ['BACKOFFICE', 'AI_RESOURCES'];
 
 function AppContent() {
-  const { user, loading, logout, setActiveRole, setActiveWhitelabel } = useAuth();
+  const { user, loading, logout, setActiveRole, setActiveWhitelabel, returnToGlobalAdmin } = useAuth();
   const [view, setView] = useState<View>('DASHBOARD');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -217,6 +218,7 @@ function AppContent() {
       case 'TERAPEUTAS': return <TherapistListView />;
       case 'BACKOFFICE': return <BackofficeView />;
       case 'AI_RESOURCES': return <AiResourcesView />;
+      case 'CAPTACAO': return <CaptacaoView />;
       case 'CONFIGURACOES': return (
         <TenantAccessState
           title="Configuracoes indisponiveis"
@@ -253,6 +255,7 @@ function AppContent() {
           onLogout={logout}
           onSwitchProfile={user.roles.length > 1 ? handleSwitchProfile : undefined}
           onSwitchWhitelabel={(user.whitelabelMemberships?.filter((membership) => membership.status === 'ATIVO').length ?? 0) > 1 ? handleSwitchWhitelabel : undefined}
+          onReturnToGlobalAdmin={user.roles.includes('ADMIN_GLOBAL') && user.activeRole !== 'ADMIN_GLOBAL' ? returnToGlobalAdmin : undefined}
           onMenuClick={() => setIsSidebarOpen(true)}
         />
         

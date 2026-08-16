@@ -1,20 +1,6 @@
 {
   "indexes": [
     {
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "userId", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "members",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "email", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "appointments",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -49,5 +35,26 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "members",
+      "fieldPath": "userId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    },
+    {
+      "collectionGroup": "members",
+      "fieldPath": "email",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "DESCENDING", "queryScope": "COLLECTION" },
+        { "arrayConfig": "CONTAINS", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
 }

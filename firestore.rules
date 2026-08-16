@@ -71,6 +71,114 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    // --- Leads vindos de site publico -------------------------------------
+    //
+    // ATENCAO: `leads` e a UNICA colecao do sistema que aceita escrita sem
+    // autenticacao. Por isso a validacao abaixo trabalha com lista fechada de
+    // campos permitidos, nao com lista de proibidos. Campo novo precisa ser
+    // adicionado aqui, em `src/types.ts` (Lead / LEAD_LIMITS) e no contrato
+    // espelhado da landing page.
+    //
+    // Nao existe leitura publica: quem envia nao recupera nada de volta.
+
+    function leadAllowedKeys() {
+      return [
+        'whitelabelId', 'origem', 'responsavel', 'whatsapp', 'bebeNome',
+        'bebeIdadeFaixa', 'preocupacoes', 'periodoContato', 'observacoes',
+        'consentimento', 'consentimentoTexto', 'status', 'createdAt'
+      ];
+    }
+
+    function leadRequiredKeys() {
+      return [
+        'whitelabelId', 'origem', 'responsavel', 'whatsapp', 'bebeIdadeFaixa',
+        'preocupacoes', 'consentimento', 'consentimentoTexto', 'status', 'createdAt'
+      ];
+    }
+
+    function isValidLeadCreate(whitelabelId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(leadAllowedKeys())
+        && data.keys().hasAll(leadRequiredKeys())
+        && data.whitelabelId == whitelabelId
+        && data.status == 'NOVO'
+        && data.consentimento == true
+        && data.createdAt == request.time
+        && data.origem is string
+        && data.origem.size() > 0 && data.origem.size() <= 60
+        && data.responsavel is string
+        && data.responsavel.size() > 1 && data.responsavel.size() <= 120
+        && data.whatsapp is string
+        && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 25
+        && data.consentimentoTexto is string
+        && data.consentimentoTexto.size() > 0 && data.consentimentoTexto.size() <= 500
+        && data.bebeIdadeFaixa in ['0-1m', '1-3m', '3-6m', '6-12m', '12-24m', 'outra']
+        && data.preocupacoes is list
+        && data.preocupacoes.size() > 0 && data.preocupacoes.size() <= 10
+        && (!('bebeNome' in data)
+            || (data.bebeNome is string && data.bebeNome.size() <= 120))
+        && (!('periodoContato' in data)
+            || data.periodoContato in ['MANHA', 'TARDE', 'NOITE', 'QUALQUER'])
+        && (!('observacoes' in data)
+            || (data.observacoes is string && data.observacoes.size() <= 1000));
+    }
+
+    // O operador tria o lead, mas nao reescreve o que a pessoa enviou —
+    // preserva a integridade da prova de consentimento.
+    function isValidLeadTriage() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status', 'notasInternas', 'convertedPatientId', 'updatedAt', 'whitelabelId'])
+        && request.resource.data.status in
+             ['NOVO', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO']
+        && (!('notasInternas' in request.resource.data)
+            || (request.resource.data.notasInternas is string
+                && request.resource.data.notasInternas.size() <= 2000));
+    }
+
+    // --- Perfil do usuario -------------------------------------------------
+    //
+    // `AuthContext` confia em dois campos de `users/{uid}` para decidir
+    // privilegio:
+    //
+    //   roles            -> entra direto na lista de papeis do usuario
+    //   provisioningMode -> decide o provisionamento de workspace e, com
+    //                       memberships vazias, empurra a conta para o
+    //                       fallback `legacy-default`
+    //
+    // Como `isOwnMemberDoc` e apenas `uid == userId`, permitir que a pessoa
+    // escreva esses campos livremente no proprio documento seria auto-promocao
+    // a ADMIN_GLOBAL.
+    //
+    // Existe uma excecao legitima: `personalWorkspaceService` provisiona o
+    // workspace individual em nome do proprio usuario e grava `users/{uid}` com
+    // valores fixos. Por isso a regra restringe VALOR, nao apenas chave —
+    // mesmo padrao ja usado em `whitelabels/individual_{uid}` logo abaixo.
+    // `TERAPEUTA` e o papel que a conta receberia de qualquer forma, entao
+    // permitir esse valor exato nao abre escalacao.
+    //
+    // O Admin SDK ignora estas regras, entao `npm run admin:grant` continua
+    // funcionando normalmente.
+
+    function profilePrivilegedFields() {
+      return ['roles', 'provisioningMode'];
+    }
+
+    function isPersonalWorkspaceBootstrap() {
+      return request.resource.data.roles == ['TERAPEUTA']
+        && request.resource.data.provisioningMode == 'PERSONAL_WORKSPACE';
+    }
+
+    function selfProfileCreateIsSafe() {
+      return !request.resource.data.keys().hasAny(profilePrivilegedFields())
+        || isPersonalWorkspaceBootstrap();
+    }
+
+    function selfProfileUpdateIsSafe() {
+      return !request.resource.data.diff(resource.data)
+          .affectedKeys().hasAny(profilePrivilegedFields())
+        || isPersonalWorkspaceBootstrap();
+    }
+
     function therapistCanAccessPatient(whitelabelId) {
       return isTerapeuta(whitelabelId)
         && (
@@ -97,7 +205,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAdminGlobal() || isOwnMemberDoc(userId);
-      allow create, update: if isAdminGlobal() || isOwnMemberDoc(userId);
+      allow create: if isAdminGlobal()
+        || (isOwnMemberDoc(userId) && selfProfileCreateIsSafe());
+      allow update: if isAdminGlobal()
+        || (isOwnMemberDoc(userId) && selfProfileUpdateIsSafe());
       allow delete: if isAdminGlobal();
     }
 
@@ -348,6 +459,33 @@ service cloud.firestore {
         allow read: if isAdminGlobal() || isGestor(whitelabelId);
         allow create: if signedIn() && isActiveMember(whitelabelId);
         allow update, delete: if false;
+      }
+
+      // Escrita anonima permitida SOMENTE aqui e somente para create.
+      match /leads/{leadId} {
+        allow create: if isValidLeadCreate(whitelabelId);
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+          );
+        allow update: if existingTenantFieldIsValid(whitelabelId)
+          && tenantFieldIsValid(whitelabelId)
+          && isValidLeadTriage()
+          && (
+            isAdminGlobal()
+            || isGestor(whitelabelId)
+            || isRecepcao(whitelabelId)
+          );
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
+      }
+
+      // Conteudo da landing page: leitura publica por definicao.
+      match /siteContent/{docId} {
+        allow read: if true;
+        allow write: if tenantFieldIsValid(whitelabelId)
+          && (isAdminGlobal() || isGestor(whitelabelId));
       }
     }
 

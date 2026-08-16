@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth, GoogleAuthProvider } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import { connectStorageEmulator, getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -16,6 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 const viteEnv = (import.meta as ImportMeta & {
@@ -37,7 +39,12 @@ if (shouldUseEmulators && !emulatorState.__clinicDfuFirebaseEmulatorsConnected) 
     viteEnv.VITE_FIRESTORE_EMULATOR_HOST || '127.0.0.1',
     Number(viteEnv.VITE_FIRESTORE_EMULATOR_PORT || 8080)
   );
+  connectStorageEmulator(
+    storage,
+    viteEnv.VITE_STORAGE_EMULATOR_HOST || '127.0.0.1',
+    Number(viteEnv.VITE_STORAGE_EMULATOR_PORT || 9199)
+  );
   emulatorState.__clinicDfuFirebaseEmulatorsConnected = true;
 }
 
-export { auth, db, googleProvider };
+export { auth, db, storage, googleProvider };

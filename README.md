@@ -37,6 +37,8 @@ Details are documented in [docs/AI_RESOURCES.md](docs/AI_RESOURCES.md).
 - Fluxo de autenticacao e tenant: [docs/AUTH_TENANT_FLOW.md](docs/AUTH_TENANT_FLOW.md).
 - Backoffice de whitelabel: [docs/WHITELABEL_BACKOFFICE.md](docs/WHITELABEL_BACKOFFICE.md).
 - Services tenant-aware: [docs/TENANT_AWARE_SERVICES.md](docs/TENANT_AWARE_SERVICES.md).
+- Modulo de captacao e conteudo de site: [docs/MODULO_CAPTACAO.md](docs/MODULO_CAPTACAO.md).
+- Acesso ADMIN_GLOBAL e custom claims: [docs/ACESSO_ADMIN_GLOBAL.md](docs/ACESSO_ADMIN_GLOBAL.md).
 - Telas com escopo por whitelabel: [docs/TENANT_AWARE_SCREENS.md](docs/TENANT_AWARE_SCREENS.md).
 - Migracao para whitelabel: [docs/WHITELABEL_MIGRATION.md](docs/WHITELABEL_MIGRATION.md).
 - Matriz de seguranca: [docs/WHITELABEL_SECURITY_MATRIX.md](docs/WHITELABEL_SECURITY_MATRIX.md).

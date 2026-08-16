@@ -25,8 +25,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   setActiveRole: (role: UserRole) => void;
   setActiveWhitelabel: (whitelabelId: string) => void;
-  assumeLegacyManagement: () => void;
   returnToGlobalAdmin: () => void;
+  enterWhitelabelAsGestor: (whitelabelId: string, whitelabelName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,22 +75,6 @@ function normalizeMembership(id: string, data: any, firebaseUser: FirebaseUser):
     patientIds: Array.isArray(data.patientIds) ? data.patientIds : undefined,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
-  };
-}
-
-function buildLegacyMembership(firebaseUser: FirebaseUser, roles: UserRole[]): WhitelabelMembership | null {
-  const legacyTenantRoles = roles.filter((role) => role !== 'ADMIN_GLOBAL');
-  if (legacyTenantRoles.length === 0) return null;
-
-  return {
-    id: LEGACY_WHITELABEL_ID,
-    whitelabelId: LEGACY_WHITELABEL_ID,
-    whitelabelName: LEGACY_WHITELABEL_NAME,
-    userId: firebaseUser.uid,
-    email: firebaseUser.email ?? '',
-    name: firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Usuario',
-    roles: legacyTenantRoles,
-    status: 'ATIVO',
   };
 }
 
@@ -169,11 +153,20 @@ async function loadMemberships(firebaseUser: FirebaseUser) {
     }));
   }
 
-  try {
-    await loadByField('userId', firebaseUser.uid);
-    await loadByField('email', firebaseUser.email);
-  } catch (error) {
-    console.warn('Nao foi possivel carregar associacoes de whitelabel:', error);
+  // Cada busca falha por conta propria. Compartilhar um `try` fazia a falha de
+  // uma cancelar a outra: uma consulta de collectionGroup sem indice lancava
+  // FAILED_PRECONDITION em `userId` e a busca por `email` nem era tentada,
+  // deixando o usuario sem membership e caindo em "Acesso nao vinculado"
+  // mesmo tendo associacao valida.
+  for (const [campo, valor] of [
+    ['userId', firebaseUser.uid],
+    ['email', firebaseUser.email],
+  ] as const) {
+    try {
+      await loadByField(campo, valor);
+    } catch (error) {
+      console.warn(`Nao foi possivel carregar associacoes por ${campo}:`, error);
+    }
   }
 
   try {
@@ -213,27 +206,36 @@ async function buildUser(firebaseUser: FirebaseUser): Promise<User> {
     }
   }
 
+  // Papel vem de custom claims e memberships — exatamente as duas fontes que
+  // `firestore.rules` reconhece. A UI e as regras passam a concordar; antes era
+  // possivel a tela liberar o Backoffice enquanto o Firestore negava tudo.
+  //
+  // Removidos junto da migracao para whitelabels:
+  //
+  //   `users/{uid}.roles`  — era gravavel pelo proprio usuario, o que permitia
+  //                          auto-promocao a ADMIN_GLOBAL. Hoje e redundante:
+  //                          quem tem papel tem membership.
+  //   fallback de e-mail   — qualquer endereco contendo "admin" recebia
+  //                          ADMIN_GLOBAL. Agora ADMIN_GLOBAL so por claim,
+  //                          concedida com `npm.cmd run admin:grant`.
+  //   `legacy-default`     — membership virtual que apontava os services para
+  //                          as colecoes globais, bloqueadas pelas regras. Os
+  //                          dados foram para `whitelabels/{id}/...` por
+  //                          `scripts/migrate-to-whitelabels.ts`.
+  //
+  // Conta sem claim e sem membership cai em "Acesso nao vinculado" (App.tsx),
+  // que e o comportamento correto — melhor negar do que dar acesso silencioso
+  // a dado clinico de outro tenant.
   const claimRoles = normalizeRoles(tokenResult?.claims?.roles);
-  const profileRoles = normalizeRoles(profile?.roles);
   const membershipRoles = effectiveMemberships.flatMap((membership) => membership.roles);
-  const isLocalAdminFallback = firebaseUser.email?.toLowerCase().includes('admin');
-  const legacyRoles: UserRole[] = isLocalAdminFallback ? ['ADMIN_GLOBAL'] : ['TERAPEUTA'];
 
-  let roles = uniqueRoles([...claimRoles, ...profileRoles, ...membershipRoles]);
+  let roles = uniqueRoles([...claimRoles, ...membershipRoles]);
 
   if (tokenResult?.claims?.admin === true && !roles.includes('ADMIN_GLOBAL')) {
     roles = [...roles, 'ADMIN_GLOBAL'];
   }
 
-  const shouldUseLegacyFallback = roles.length === 0;
-  if (shouldUseLegacyFallback) {
-    roles = legacyRoles;
-  }
-
-  const legacyMembership = shouldUseLegacyFallback ? buildLegacyMembership(firebaseUser, roles) : null;
-  const whitelabelMemberships = legacyMembership
-    ? [legacyMembership]
-    : effectiveMemberships;
+  const whitelabelMemberships = effectiveMemberships;
 
   const savedRole = localStorage.getItem(`activeRole_${firebaseUser.uid}`) as UserRole | null;
   const savedWhitelabelId = localStorage.getItem(`activeWhitelabel_${firebaseUser.uid}`);
@@ -321,39 +323,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({ ...user, activeWhitelabelId: whitelabelId });
   };
 
-  const assumeLegacyManagement = () => {
-    if (!user || !user.roles.includes('ADMIN_GLOBAL')) return;
-
-    const legacyMembership: WhitelabelMembership = {
-      id: LEGACY_WHITELABEL_ID,
-      whitelabelId: LEGACY_WHITELABEL_ID,
-      whitelabelName: LEGACY_WHITELABEL_NAME,
-      userId: user.id ?? user.email,
-      email: user.email,
-      name: user.name,
-      roles: ['GESTOR'],
-      status: 'ATIVO',
-    };
-
-    const memberships = user.whitelabelMemberships ?? [];
-    const nextMemberships = memberships.some((membership) => membership.whitelabelId === LEGACY_WHITELABEL_ID)
-      ? memberships
-      : [...memberships, legacyMembership];
-    const nextRoles = user.roles.includes('GESTOR') ? user.roles : [...user.roles, 'GESTOR'];
-    const storageKey = user.id ?? user.email;
-
-    localStorage.setItem(`activeRole_${storageKey}`, 'GESTOR');
-    localStorage.setItem(`activeWhitelabel_${storageKey}`, LEGACY_WHITELABEL_ID);
-
-    setUser({
-      ...user,
-      roles: nextRoles,
-      activeRole: 'GESTOR',
-      activeWhitelabelId: LEGACY_WHITELABEL_ID,
-      whitelabelMemberships: nextMemberships,
-    });
-  };
-
   const returnToGlobalAdmin = () => {
     if (!user || !user.roles.includes('ADMIN_GLOBAL')) return;
 
@@ -368,8 +337,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Acesso direto do Admin Global como Gestor, sem depender de convite/
+  // vinculo de membro. `firestore.rules` ja libera leitura/escrita irrestrita
+  // para isAdminGlobal() em todas as colecoes de whitelabel — o que faltava
+  // era a UI, que deriva `activeMembership` (App.tsx) estritamente de
+  // `whitelabelMemberships`. Em vez de reescrever esse gate em todo consumidor,
+  // injeta uma membership sintetica somente nesta sessao (nao grava no
+  // Firestore); um reload descarta e reconstroi do zero em `buildUser`.
+  const enterWhitelabelAsGestor = (whitelabelId: string, whitelabelName: string) => {
+    if (!user || !user.roles.includes('ADMIN_GLOBAL')) return;
+
+    const impersonatedMembership: WhitelabelMembership = {
+      id: `admin-impersonation:${whitelabelId}`,
+      whitelabelId,
+      whitelabelName,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      roles: ['GESTOR'],
+      status: 'ATIVO',
+    };
+
+    const nextMemberships = [
+      ...(user.whitelabelMemberships ?? []).filter((membership) => membership.whitelabelId !== whitelabelId),
+      impersonatedMembership,
+    ];
+
+    const storageKey = user.id ?? user.email;
+    localStorage.setItem(`activeRole_${storageKey}`, 'GESTOR');
+    localStorage.setItem(`activeWhitelabel_${storageKey}`, whitelabelId);
+
+    setUser({
+      ...user,
+      whitelabelMemberships: nextMemberships,
+      activeRole: 'GESTOR',
+      activeWhitelabelId: whitelabelId,
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout, setActiveRole, setActiveWhitelabel, assumeLegacyManagement, returnToGlobalAdmin }}>
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      logout,
+      setActiveRole,
+      setActiveWhitelabel,
+      returnToGlobalAdmin,
+      enterWhitelabelAsGestor,
+    }}>
       {children}
     </AuthContext.Provider>
   );

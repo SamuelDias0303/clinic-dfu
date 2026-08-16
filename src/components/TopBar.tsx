@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, LogOut, UserCircle, Menu, Sun, Moon } from 'lucide-react';
+import { Search, Bell, LogOut, UserCircle, Menu, Sun, Moon, ShieldCheck } from 'lucide-react';
 import { UserRole } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -9,10 +9,11 @@ interface TopBarProps {
   onLogout: () => Promise<void>;
   onSwitchProfile?: () => void;
   onSwitchWhitelabel?: () => void;
+  onReturnToGlobalAdmin?: () => void;
   onMenuClick?: () => void;
 }
 
-export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitelabel, onMenuClick }: TopBarProps) {
+export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitelabel, onReturnToGlobalAdmin, onMenuClick }: TopBarProps) {
   const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const activeMembership = user?.whitelabelMemberships?.find(
@@ -59,6 +60,17 @@ export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitel
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-4 shrink-0">
+          {onReturnToGlobalAdmin && (
+            <button
+              onClick={onReturnToGlobalAdmin}
+              className="hidden sm:flex items-center gap-1.5 text-[10px] lg:text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline transition-all"
+              title="Sair da simulacao e voltar ao painel de Admin Global"
+            >
+              <ShieldCheck size={14} />
+              Voltar ao Admin Global
+            </button>
+          )}
+
           {onSwitchProfile && (
             <button 
               onClick={onSwitchProfile}

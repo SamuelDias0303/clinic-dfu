@@ -15,7 +15,12 @@ import { toFirestoreData } from '../lib/firestoreData';
 import { ROOT_COLLECTIONS } from '../lib/tenantPaths';
 import { Whitelabel, WhitelabelStatus } from '../types';
 
-const COLLECTION_NAME = ROOT_COLLECTIONS.legacyClients;
+// As whitelabels de pratica (raiza-fisio, rafaela-fisio, ...) vivem em
+// `whitelabels/{id}`, a mesma colecao usada por scopedCollection,
+// migrate-to-whitelabels.ts e firestore.rules. `clients` era a colecao antiga,
+// anterior a essa migracao, e so segue existindo pelo doc sentinela
+// `legacy-default` (ver serviceScope.isLegacyWhitelabel).
+const COLLECTION_NAME = ROOT_COLLECTIONS.whitelabels;
 
 type LegacyWhitelabelPayload = Omit<Whitelabel, 'id' | 'createdAt' | 'updatedAt'>;
 
@@ -23,12 +28,6 @@ function normalizeStatus(status: unknown): WhitelabelStatus {
   if (status === 'SUSPENSO' || status === 'Suspenso') return 'SUSPENSO';
   if (status === 'ARQUIVADO' || status === 'Arquivado') return 'ARQUIVADO';
   return 'ATIVO';
-}
-
-function toLegacyStatus(status: WhitelabelStatus) {
-  if (status === 'SUSPENSO') return 'Suspenso';
-  if (status === 'ARQUIVADO') return 'Arquivado';
-  return 'Ativo';
 }
 
 function normalizeWhitelabel(id: string, data: any): Whitelabel {
@@ -39,6 +38,7 @@ function normalizeWhitelabel(id: string, data: any): Whitelabel {
     domain: data.domain,
     status: normalizeStatus(data.status),
     plan: data.plan ?? 'Padrao',
+    workspaceType: data.workspaceType,
     contactEmail: data.contactEmail,
     contactPhone: data.contactPhone,
     branding: data.branding ?? {
@@ -50,29 +50,11 @@ function normalizeWhitelabel(id: string, data: any): Whitelabel {
   };
 }
 
-function toLegacyPayload(whitelabel: LegacyWhitelabelPayload) {
-  return {
-    ...whitelabel,
-    status: toLegacyStatus(whitelabel.status),
-  };
-}
-
-function toLegacyPartialPayload(whitelabel: Partial<LegacyWhitelabelPayload>) {
-  const payload: Record<string, unknown> = {
-    ...whitelabel,
-  };
-
-  if (whitelabel.status) {
-    payload.status = toLegacyStatus(whitelabel.status);
-  }
-
-  return payload;
-}
-
 export const whitelabelService = {
   async createWhitelabel(whitelabel: LegacyWhitelabelPayload) {
     const docRef = await addDoc(collection(db, COLLECTION_NAME), toFirestoreData({
-      ...toLegacyPayload(whitelabel),
+      ...whitelabel,
+      workspaceType: whitelabel.workspaceType ?? 'CLINICA',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }));
@@ -84,7 +66,14 @@ export const whitelabelService = {
     const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
 
     return onSnapshot(q, (snapshot) => {
-      callback(snapshot.docs.map((item) => normalizeWhitelabel(item.id, item.data())));
+      callback(
+        snapshot.docs
+          .map((item) => normalizeWhitelabel(item.id, item.data()))
+          // Workspaces individuais (personalWorkspaceService) sao consultorios
+          // pessoais de um unico terapeuta, nao praticas gerenciaveis pelo
+          // Admin Global — nao devem aparecer nesta tela.
+          .filter((whitelabel) => whitelabel.workspaceType !== 'INDIVIDUAL')
+      );
     });
   },
 
@@ -105,7 +94,7 @@ export const whitelabelService = {
   async updateWhitelabel(id: string, whitelabel: Partial<LegacyWhitelabelPayload>) {
     const docRef = doc(db, COLLECTION_NAME, id);
     await updateDoc(docRef, toFirestoreData({
-      ...toLegacyPartialPayload(whitelabel),
+      ...whitelabel,
       updatedAt: serverTimestamp(),
     }));
   },

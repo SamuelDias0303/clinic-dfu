@@ -29,7 +29,7 @@ const statusClasses: Record<Whitelabel['status'], string> = {
 };
 
 export default function BackofficeView() {
-  const { user, assumeLegacyManagement } = useAuth();
+  const { user, enterWhitelabelAsGestor } = useAuth();
   const [whitelabels, setWhitelabels] = useState<Whitelabel[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -136,6 +136,11 @@ export default function BackofficeView() {
     if (whitelabel.id === LEGACY_WHITELABEL_ID) return;
     setMembersWhitelabel(whitelabel);
     setIsMembersOpen(true);
+  };
+
+  const handleAccessAsGestor = (whitelabel: Whitelabel) => {
+    if (!isAdminGlobal || !whitelabel.id || whitelabel.id === LEGACY_WHITELABEL_ID) return;
+    enterWhitelabelAsGestor(whitelabel.id, whitelabel.name);
   };
 
   const requestStatusChange = (whitelabel: Whitelabel, status: Whitelabel['status']) => {
@@ -300,11 +305,11 @@ export default function BackofficeView() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        {whitelabel.id === LEGACY_WHITELABEL_ID && isAdminGlobal && (
+                        {isAdminGlobal && whitelabel.id !== LEGACY_WHITELABEL_ID && (
                           <button
-                            onClick={assumeLegacyManagement}
+                            onClick={() => handleAccessAsGestor(whitelabel)}
                             className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                            title="Acessar dados legados"
+                            title="Acessar como Gestor"
                           >
                             <LogIn size={17} />
                           </button>
@@ -408,9 +413,9 @@ export default function BackofficeView() {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2">
-                  {whitelabel.id === LEGACY_WHITELABEL_ID && isAdminGlobal && (
-                    <button onClick={assumeLegacyManagement} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-primary dark:border-slate-700">
-                      Legado
+                  {isAdminGlobal && whitelabel.id !== LEGACY_WHITELABEL_ID && (
+                    <button onClick={() => handleAccessAsGestor(whitelabel)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-primary dark:border-slate-700">
+                      Acessar como Gestor
                     </button>
                   )}
                   {whitelabel.id !== LEGACY_WHITELABEL_ID && (

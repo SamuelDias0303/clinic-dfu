@@ -13,7 +13,15 @@ export const TENANT_COLLECTIONS = {
   evolutions: 'evolutions',
   anamneses: 'anamneses',
   auditLogs: 'auditLogs',
+  leads: 'leads',
+  siteContent: 'siteContent',
 } as const;
+
+/**
+ * Documento unico de conteudo do site publico dentro de `siteContent`.
+ * Leitura publica; escrita apenas para ADMIN_GLOBAL/GESTOR do whitelabel.
+ */
+export const SITE_CONTENT_DOC_ID = 'landing';
 
 export type RootCollection = typeof ROOT_COLLECTIONS[keyof typeof ROOT_COLLECTIONS];
 export type TenantCollection = typeof TENANT_COLLECTIONS[keyof typeof TENANT_COLLECTIONS];
