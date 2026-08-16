@@ -15,3 +15,6 @@ backups/
 service-account.json
 *-service-account.json
 serviceAccountKey.json
+
+.vercel
+.firebase
