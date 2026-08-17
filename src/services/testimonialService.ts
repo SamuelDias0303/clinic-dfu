@@ -4,13 +4,14 @@ import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './ser
 import { siteContentService } from './siteContentService';
 
 /**
- * Formato usado hoje nos depoimentos publicados: "Mae do Leo (3 meses)" ou,
- * sem bebe informado, so o papel puro ("Mae"). Singular quando o valor e 1
- * ("1 mes" / "1 ano"), plural nos demais casos.
+ * Formato dos depoimentos publicados: "Mae Rafaela (5 meses)" / "Pai Joao
+ * (3 meses)", ou so o papel puro ("Mae") quando o bebe nao foi informado.
+ * Singular quando o valor e 1 ("1 mes" / "1 ano"), plural nos demais casos.
  *
- * "do"/"da" e so um chute pela ultima letra do nome — nao ha genero
- * informado no formulario. E o ponto de partida editavel na tela de
- * moderacao, nao o texto final.
+ * Sem preposicao "do"/"da" de proposito: nao ha genero informado no
+ * formulario, e adivinhar pela ultima letra do nome errava com frequencia.
+ * Ainda e o ponto de partida editavel na tela de moderacao, nao o texto
+ * final — quem modera pode ajustar antes de publicar.
  */
 export function formatarPapelPublicado(item: Pick<TestimonialPendente, 'papel' | 'bebeNome' | 'bebeIdadeValor' | 'bebeIdadeUnidade'>) {
   if (!item.bebeNome?.trim()) return item.papel;
@@ -24,10 +25,7 @@ export function formatarPapelPublicado(item: Pick<TestimonialPendente, 'papel' |
     idade = ` (${item.bebeIdadeValor} ${unidade})`;
   }
 
-  const nome = item.bebeNome.trim();
-  const preposicao = nome.toLowerCase().endsWith('a') ? 'da' : 'do';
-
-  return `${item.papel} ${preposicao} ${nome}${idade}`;
+  return `${item.papel} ${item.bebeNome.trim()}${idade}`;
 }
 
 export const testimonialService = {

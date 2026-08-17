@@ -109,13 +109,14 @@ export default function DepoimentosModeracao() {
 
               <label className="block">
                 <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
-                  Como vai aparecer no site (confira o "do"/"da" antes de aprovar)
+                  Legenda que vai aparecer embaixo do nome no site (já preenchida — edite só se quiser mudar)
                 </span>
                 <input
                   value={papeisPublicados[item.id ?? ''] ?? ''}
                   onChange={(e) =>
                     setPapeisPublicados((atual) => ({ ...atual, [item.id ?? '']: e.target.value }))
                   }
+                  placeholder="Ex: Mãe Rafaela (5 meses)"
                   className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
                 />
               </label>
