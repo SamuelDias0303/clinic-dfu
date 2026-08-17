@@ -135,6 +135,47 @@ service cloud.firestore {
                 && request.resource.data.notasInternas.size() <= 2000));
     }
 
+    // --- Depoimentos vindos da pagina publica /depoimento ------------------
+    //
+    // Junto com `leads`, e a UNICA outra colecao do sistema que aceita escrita
+    // sem autenticacao. Mesma logica: lista fechada de campos permitidos.
+    // Campo novo precisa ser adicionado aqui, em `src/types.ts`
+    // (TestimonialPendente / TESTIMONIAL_LIMITS) e no contrato espelhado da
+    // landing page. Nao existe leitura publica.
+
+    function testimonialAllowedKeys() {
+      return ['whitelabelId', 'origem', 'nome', 'papel', 'texto', 'whatsapp', 'status', 'createdAt'];
+    }
+
+    function testimonialRequiredKeys() {
+      return ['whitelabelId', 'origem', 'nome', 'papel', 'texto', 'status', 'createdAt'];
+    }
+
+    function isValidTestimonialCreate(whitelabelId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly(testimonialAllowedKeys())
+        && data.keys().hasAll(testimonialRequiredKeys())
+        && data.whitelabelId == whitelabelId
+        && data.status == 'PENDENTE'
+        && data.createdAt == request.time
+        && data.origem is string
+        && data.origem.size() > 0 && data.origem.size() <= 60
+        && data.nome is string
+        && data.nome.size() > 1 && data.nome.size() <= 120
+        && data.papel in ['Mãe', 'Pai', 'Responsável']
+        && data.texto is string
+        && data.texto.size() > 1 && data.texto.size() <= 1000
+        && (!('whatsapp' in data)
+            || (data.whatsapp is string && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 25));
+    }
+
+    // A moderacao so muda o status — nao reescreve o que a pessoa enviou.
+    function isValidTestimonialTriage() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['status', 'updatedAt', 'whitelabelId'])
+        && request.resource.data.status in ['PENDENTE', 'APROVADO', 'REJEITADO'];
+    }
+
     // --- Perfil do usuario -------------------------------------------------
     //
     // `AuthContext` confia em dois campos de `users/{uid}` para decidir
@@ -478,6 +519,18 @@ service cloud.firestore {
             || isGestor(whitelabelId)
             || isRecepcao(whitelabelId)
           );
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
+      }
+
+      // Escrita anonima permitida SOMENTE aqui (alem de `leads`) e somente para create.
+      match /depoimentosPendentes/{testimonialId} {
+        allow create: if isValidTestimonialCreate(whitelabelId);
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (isAdminGlobal() || isGestor(whitelabelId));
+        allow update: if existingTenantFieldIsValid(whitelabelId)
+          && tenantFieldIsValid(whitelabelId)
+          && isValidTestimonialTriage()
+          && (isAdminGlobal() || isGestor(whitelabelId));
         allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 

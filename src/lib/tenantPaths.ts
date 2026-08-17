@@ -15,6 +15,7 @@ export const TENANT_COLLECTIONS = {
   auditLogs: 'auditLogs',
   leads: 'leads',
   siteContent: 'siteContent',
+  depoimentosPendentes: 'depoimentosPendentes',
 } as const;
 
 /**

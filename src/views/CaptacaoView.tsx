@@ -3,11 +3,13 @@ import { motion } from 'motion/react';
 import { Download, Loader2 } from 'lucide-react';
 import { Lead, LeadStatus } from '../types';
 import { leadService } from '../services/leadService';
+import { testimonialService } from '../services/testimonialService';
 import { useAuth } from '../contexts/AuthContext';
 import LeadDetailModal from '../components/LeadDetailModal';
 import SiteContentEditor from '../components/SiteContentEditor';
+import DepoimentosModeracao from '../components/DepoimentosModeracao';
 
-type Tab = 'SOLICITACOES' | 'CONTEUDO';
+type Tab = 'SOLICITACOES' | 'DEPOIMENTOS' | 'CONTEUDO';
 
 const STATUS_META: Record<LeadStatus, { label: string; chip: string }> = {
   NOVO: {
@@ -72,12 +74,21 @@ export default function CaptacaoView() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<LeadStatus | 'TODOS'>('TODOS');
   const [selected, setSelected] = useState<Lead | null>(null);
+  const [depoimentosPendentes, setDepoimentosPendentes] = useState(0);
 
   useEffect(() => {
     setLoading(true);
     const unsubscribe = leadService.subscribeToLeads((data) => {
       setLeads(data);
       setLoading(false);
+    }, whitelabelId);
+
+    return () => unsubscribe();
+  }, [whitelabelId]);
+
+  useEffect(() => {
+    const unsubscribe = testimonialService.subscribeToPending((data) => {
+      setDepoimentosPendentes(data.length);
     }, whitelabelId);
 
     return () => unsubscribe();
@@ -113,6 +124,7 @@ export default function CaptacaoView() {
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800">
         {([
           ['SOLICITACOES', `Solicitacoes${novos ? ` (${novos})` : ''}`],
+          ['DEPOIMENTOS', `Depoimentos${depoimentosPendentes ? ` (${depoimentosPendentes})` : ''}`],
           ['CONTEUDO', 'Conteudo do site'],
         ] as [Tab, string][]).map(([id, label]) => (
           <button
@@ -132,6 +144,8 @@ export default function CaptacaoView() {
 
       {tab === 'CONTEUDO' ? (
         <SiteContentEditor />
+      ) : tab === 'DEPOIMENTOS' ? (
+        <DepoimentosModeracao />
       ) : loading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="animate-spin text-primary" size={32} />

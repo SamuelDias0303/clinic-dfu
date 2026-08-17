@@ -196,6 +196,41 @@ export const LEAD_LIMITS = {
   preocupacaoTamanho: 120,
 } as const;
 
+export type TestimonialStatus = 'PENDENTE' | 'APROVADO' | 'REJEITADO';
+
+export type TestimonialPapel = 'Mãe' | 'Pai' | 'Responsável';
+
+/**
+ * Depoimento enviado pela pagina publica `/depoimento` da landing page.
+ *
+ * Junto com `Lead`, e a segunda e ultima colecao do sistema que aceita escrita
+ * anonima. Nasce sempre com `status: 'PENDENTE'` e so entra em
+ * `SiteContent.depoimentos.itens` quando aprovado no backoffice — ver
+ * `testimonialService.approve`. Os limites de campo abaixo estao replicados em
+ * `firestore.rules` e no contrato espelhado da landing page
+ * (`landing-page-raiza/src/lib/clinicContract.ts`) — alterar aqui exige
+ * alterar os tres.
+ */
+export interface TestimonialPendente {
+  id?: string;
+  whitelabelId?: string;
+  origem: string;
+  nome: string;
+  papel: TestimonialPapel;
+  texto: string;
+  whatsapp?: string;
+  status: TestimonialStatus;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const TESTIMONIAL_LIMITS = {
+  nome: 120,
+  papel: 60,
+  texto: 1000,
+  whatsapp: 25,
+} as const;
+
 export interface SiteImageRef {
   src: string;
   alt: string;
