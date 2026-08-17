@@ -200,6 +200,8 @@ export type TestimonialStatus = 'PENDENTE' | 'APROVADO' | 'REJEITADO';
 
 export type TestimonialPapel = 'Mãe' | 'Pai' | 'Responsável';
 
+export type TestimonialIdadeUnidade = 'meses' | 'anos';
+
 /**
  * Depoimento enviado pela pagina publica `/depoimento` da landing page.
  *
@@ -219,6 +221,9 @@ export interface TestimonialPendente {
   papel: TestimonialPapel;
   texto: string;
   whatsapp?: string;
+  bebeNome?: string;
+  bebeIdadeValor?: number;
+  bebeIdadeUnidade?: TestimonialIdadeUnidade;
   status: TestimonialStatus;
   createdAt?: any;
   updatedAt?: any;
@@ -229,6 +234,8 @@ export const TESTIMONIAL_LIMITS = {
   papel: 60,
   texto: 1000,
   whatsapp: 25,
+  bebeNome: 120,
+  bebeIdadeValorMax: 200,
 } as const;
 
 export interface SiteImageRef {

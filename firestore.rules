@@ -144,7 +144,10 @@ service cloud.firestore {
     // landing page. Nao existe leitura publica.
 
     function testimonialAllowedKeys() {
-      return ['whitelabelId', 'origem', 'nome', 'papel', 'texto', 'whatsapp', 'status', 'createdAt'];
+      return [
+        'whitelabelId', 'origem', 'nome', 'papel', 'texto', 'whatsapp',
+        'bebeNome', 'bebeIdadeValor', 'bebeIdadeUnidade', 'status', 'createdAt'
+      ];
     }
 
     function testimonialRequiredKeys() {
@@ -166,7 +169,13 @@ service cloud.firestore {
         && data.texto is string
         && data.texto.size() > 1 && data.texto.size() <= 1000
         && (!('whatsapp' in data)
-            || (data.whatsapp is string && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 25));
+            || (data.whatsapp is string && data.whatsapp.size() >= 8 && data.whatsapp.size() <= 25))
+        && (!('bebeNome' in data)
+            || (data.bebeNome is string && data.bebeNome.size() <= 120))
+        && (!('bebeIdadeValor' in data)
+            || (data.bebeIdadeValor is number && data.bebeIdadeValor >= 0 && data.bebeIdadeValor <= 200))
+        && (!('bebeIdadeUnidade' in data)
+            || data.bebeIdadeUnidade in ['meses', 'anos']);
     }
 
     // A moderacao so muda o status — nao reescreve o que a pessoa enviou.

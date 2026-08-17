@@ -3,6 +3,33 @@ import { TestimonialPendente, TestimonialStatus } from '../types';
 import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './serviceScope';
 import { siteContentService } from './siteContentService';
 
+/**
+ * Formato usado hoje nos depoimentos publicados: "Mae do Leo (3 meses)" ou,
+ * sem bebe informado, so o papel puro ("Mae"). Singular quando o valor e 1
+ * ("1 mes" / "1 ano"), plural nos demais casos.
+ *
+ * "do"/"da" e so um chute pela ultima letra do nome — nao ha genero
+ * informado no formulario. E o ponto de partida editavel na tela de
+ * moderacao, nao o texto final.
+ */
+export function formatarPapelPublicado(item: Pick<TestimonialPendente, 'papel' | 'bebeNome' | 'bebeIdadeValor' | 'bebeIdadeUnidade'>) {
+  if (!item.bebeNome?.trim()) return item.papel;
+
+  let idade = '';
+  if (item.bebeIdadeValor != null && item.bebeIdadeUnidade) {
+    const singular = item.bebeIdadeValor === 1;
+    const unidade = item.bebeIdadeUnidade === 'meses'
+      ? (singular ? 'mês' : 'meses')
+      : (singular ? 'ano' : 'anos');
+    idade = ` (${item.bebeIdadeValor} ${unidade})`;
+  }
+
+  const nome = item.bebeNome.trim();
+  const preposicao = nome.toLowerCase().endsWith('a') ? 'da' : 'do';
+
+  return `${item.papel} ${preposicao} ${nome}${idade}`;
+}
+
 export const testimonialService = {
   subscribeToPending(
     callback: (items: TestimonialPendente[]) => void,
@@ -45,8 +72,17 @@ export const testimonialService = {
    * publicado que a landing page le) e so entao marca o pendente como
    * aprovado. Se o conteudo do site ainda nao foi publicado, falha cedo em
    * vez de criar um documento parcial.
+   *
+   * `papelPublicado` vem da tela de moderacao (pre-preenchido por
+   * `formatarPapelPublicado`, mas editavel — a heuristica de genero "do/da"
+   * nao acerta sempre, entao quem modera confere antes de publicar).
    */
-  async approve(item: TestimonialPendente, whitelabelId?: string | null, updatedByEmail?: string) {
+  async approve(
+    item: TestimonialPendente,
+    papelPublicado: string,
+    whitelabelId?: string | null,
+    updatedByEmail?: string
+  ) {
     if (!item.id) throw new Error('Depoimento sem id.');
 
     const current = await siteContentService.getContent(whitelabelId);
@@ -59,7 +95,7 @@ export const testimonialService = {
       texto: item.texto.trim(),
       inicial,
       nome: item.nome.trim(),
-      papel: item.papel,
+      papel: papelPublicado.trim() || item.papel,
     };
 
     await siteContentService.saveContent(

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Loader2, X } from 'lucide-react';
 import { TestimonialPendente } from '../types';
-import { testimonialService } from '../services/testimonialService';
+import { formatarPapelPublicado, testimonialService } from '../services/testimonialService';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DepoimentosModeracao() {
@@ -9,6 +9,7 @@ export default function DepoimentosModeracao() {
   const whitelabelId = user?.activeWhitelabelId;
 
   const [itens, setItens] = useState<TestimonialPendente[]>([]);
+  const [papeisPublicados, setPapeisPublicados] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -17,6 +18,14 @@ export default function DepoimentosModeracao() {
     setLoading(true);
     const unsubscribe = testimonialService.subscribeToPending((data) => {
       setItens(data);
+      // So preenche o rascunho de campos ainda nao editados pelo gestor.
+      setPapeisPublicados((atual) => {
+        const next = { ...atual };
+        data.forEach((item) => {
+          if (item.id && !(item.id in next)) next[item.id] = formatarPapelPublicado(item);
+        });
+        return next;
+      });
       setLoading(false);
     }, whitelabelId);
 
@@ -28,7 +37,8 @@ export default function DepoimentosModeracao() {
     setProcessandoId(item.id);
     setErro(null);
     try {
-      await testimonialService.approve(item, whitelabelId, user?.email);
+      const papelPublicado = papeisPublicados[item.id] ?? formatarPapelPublicado(item);
+      await testimonialService.approve(item, papelPublicado, whitelabelId, user?.email);
     } catch (err) {
       console.error(err);
       setErro(err instanceof Error ? err.message : 'Nao foi possivel aprovar o depoimento.');
@@ -83,6 +93,10 @@ export default function DepoimentosModeracao() {
                   <p className="text-sm font-bold text-slate-900 dark:text-white">{item.nome}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                     {item.papel}
+                    {item.bebeNome ? ` · Bebê: ${item.bebeNome}` : ''}
+                    {item.bebeIdadeValor != null && item.bebeIdadeUnidade
+                      ? ` (${item.bebeIdadeValor} ${item.bebeIdadeUnidade})`
+                      : ''}
                     {item.whatsapp ? ` · ${item.whatsapp}` : ''}
                     {item.createdAt?.toDate?.() ? ` · ${item.createdAt.toDate().toLocaleString('pt-BR')}` : ''}
                   </p>
@@ -92,6 +106,19 @@ export default function DepoimentosModeracao() {
               <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
                 {item.texto}
               </p>
+
+              <label className="block">
+                <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                  Como vai aparecer no site (confira o "do"/"da" antes de aprovar)
+                </span>
+                <input
+                  value={papeisPublicados[item.id ?? ''] ?? ''}
+                  onChange={(e) =>
+                    setPapeisPublicados((atual) => ({ ...atual, [item.id ?? '']: e.target.value }))
+                  }
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
+                />
+              </label>
 
               <div className="flex items-center gap-2 pt-1">
                 <button
