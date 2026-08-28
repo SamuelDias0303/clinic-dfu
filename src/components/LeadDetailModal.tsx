@@ -142,6 +142,23 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 ))}
               </dd>
             </div>
+            {lead.outroMotivo && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Outro motivo</dt>
+                <dd className="text-slate-900 dark:text-slate-100 mt-0.5">{lead.outroMotivo}</dd>
+              </div>
+            )}
+            {lead.endereco && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Endereco</dt>
+                <dd className="text-slate-900 dark:text-slate-100 mt-0.5">
+                  {lead.endereco.logradouro}, {lead.endereco.numero}
+                  {lead.endereco.complemento ? ` - ${lead.endereco.complemento}` : ''}
+                  {' · '}{lead.endereco.bairro} · {lead.endereco.cidade}/{lead.endereco.estado}
+                  {' · CEP '}{lead.endereco.cep}
+                </dd>
+              </div>
+            )}
             {lead.periodoContato && (
               <div>
                 <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Melhor periodo</dt>
@@ -152,7 +169,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             )}
             {lead.observacoes && (
               <div className="sm:col-span-2">
-                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Observacoes</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Gestacao e parto</dt>
                 <dd className="text-slate-900 dark:text-slate-100 mt-0.5 whitespace-pre-wrap">{lead.observacoes}</dd>
               </div>
             )}

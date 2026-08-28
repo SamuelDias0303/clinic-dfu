@@ -45,8 +45,8 @@ const FAIXA_LABEL: Record<string, string> = {
 
 function toCsv(leads: Lead[]) {
   const header = [
-    'Data', 'Responsavel', 'WhatsApp', 'Bebe', 'Idade', 'Preocupacoes',
-    'Periodo', 'Observacoes', 'Status', 'Origem',
+    'Data', 'Responsavel', 'WhatsApp', 'Bebe', 'Idade', 'Preocupacoes', 'Outro motivo',
+    'Periodo', 'Gestacao e parto', 'Endereco', 'Status', 'Origem',
   ];
   const escape = (value: string) => `"${String(value ?? '').replace(/"/g, '""')}"`;
   const rows = leads.map((lead) => [
@@ -56,8 +56,12 @@ function toCsv(leads: Lead[]) {
     lead.bebeNome ?? '',
     FAIXA_LABEL[lead.bebeIdadeFaixa] ?? lead.bebeIdadeFaixa,
     lead.preocupacoes.join(' | '),
+    lead.outroMotivo ?? '',
     lead.periodoContato ?? '',
     lead.observacoes ?? '',
+    lead.endereco
+      ? `${lead.endereco.logradouro}, ${lead.endereco.numero}${lead.endereco.complemento ? ` - ${lead.endereco.complemento}` : ''} - ${lead.endereco.bairro} - ${lead.endereco.cidade}/${lead.endereco.estado} - CEP ${lead.endereco.cep}`
+      : '',
     STATUS_META[lead.status]?.label ?? lead.status,
     lead.origem,
   ].map(escape).join(','));

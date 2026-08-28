@@ -165,6 +165,16 @@ export type LeadPeriodoContato = 'MANHA' | 'TARDE' | 'NOITE' | 'QUALQUER';
  * campo e tamanho abaixo estao replicados em `firestore.rules` e no contrato
  * espelhado da landing page — alterar aqui exige alterar os tres.
  */
+export interface LeadEndereco {
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
 export interface Lead {
   id?: string;
   whitelabelId?: string;
@@ -174,8 +184,10 @@ export interface Lead {
   bebeNome?: string;
   bebeIdadeFaixa: LeadFaixaIdade;
   preocupacoes: string[];
+  outroMotivo?: string;
   periodoContato?: LeadPeriodoContato;
-  observacoes?: string;
+  observacoes: string;
+  endereco: LeadEndereco;
   consentimento: true;
   consentimentoTexto: string;
   status: LeadStatus;
@@ -190,10 +202,20 @@ export const LEAD_LIMITS = {
   whatsapp: 25,
   bebeNome: 120,
   observacoes: 1000,
+  outroMotivo: 200,
   consentimentoTexto: 500,
   origem: 60,
   preocupacoesMax: 10,
   preocupacaoTamanho: 120,
+  endereco: {
+    cep: 9,
+    logradouro: 200,
+    numero: 20,
+    complemento: 120,
+    bairro: 120,
+    cidade: 120,
+    estado: 2,
+  },
 } as const;
 
 export type TestimonialStatus = 'PENDENTE' | 'APROVADO' | 'REJEITADO';
