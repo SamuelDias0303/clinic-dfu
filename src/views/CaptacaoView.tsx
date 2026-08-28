@@ -5,7 +5,7 @@ import { Lead, LeadStatus } from '../types';
 import { leadService } from '../services/leadService';
 import { testimonialService } from '../services/testimonialService';
 import { useAuth } from '../contexts/AuthContext';
-import LeadDetailModal from '../components/LeadDetailModal';
+import LeadDetailModal, { formatarEndereco } from '../components/LeadDetailModal';
 import SiteContentEditor from '../components/SiteContentEditor';
 import DepoimentosModeracao from '../components/DepoimentosModeracao';
 
@@ -59,9 +59,7 @@ function toCsv(leads: Lead[]) {
     lead.outroMotivo ?? '',
     lead.periodoContato ?? '',
     lead.observacoes ?? '',
-    lead.endereco
-      ? `${lead.endereco.logradouro}, ${lead.endereco.numero}${lead.endereco.complemento ? ` - ${lead.endereco.complemento}` : ''} - ${lead.endereco.bairro} - ${lead.endereco.cidade}/${lead.endereco.estado} - CEP ${lead.endereco.cep}`
-      : '',
+    formatarEndereco(lead.endereco),
     STATUS_META[lead.status]?.label ?? lead.status,
     lead.origem,
   ].map(escape).join(','));

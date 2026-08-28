@@ -93,7 +93,7 @@ service cloud.firestore {
     function leadRequiredKeys() {
       return [
         'whitelabelId', 'origem', 'responsavel', 'whatsapp', 'bebeIdadeFaixa',
-        'preocupacoes', 'observacoes', 'endereco', 'consentimento',
+        'preocupacoes', 'observacoes', 'consentimento',
         'consentimentoTexto', 'status', 'createdAt'
       ];
     }
@@ -102,21 +102,17 @@ service cloud.firestore {
       return ['cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'estado'];
     }
 
-    function enderecoRequiredKeys() {
-      return ['cep', 'logradouro', 'numero', 'bairro', 'cidade', 'estado'];
-    }
-
-    // Endereco completo pra visita/agendamento — campos padrao do Brasil.
+    // Endereco opcional, campo a campo — nenhum sub-campo e obrigatorio.
+    // So valida tipo/tamanho de quem foi enviado.
     function isValidEndereco(endereco) {
       return endereco is map
         && endereco.keys().hasOnly(enderecoAllowedKeys())
-        && endereco.keys().hasAll(enderecoRequiredKeys())
-        && endereco.cep is string && endereco.cep.size() >= 8 && endereco.cep.size() <= 9
-        && endereco.logradouro is string && endereco.logradouro.size() > 0 && endereco.logradouro.size() <= 200
-        && endereco.numero is string && endereco.numero.size() > 0 && endereco.numero.size() <= 20
-        && endereco.bairro is string && endereco.bairro.size() > 0 && endereco.bairro.size() <= 120
-        && endereco.cidade is string && endereco.cidade.size() > 0 && endereco.cidade.size() <= 120
-        && endereco.estado is string && endereco.estado.size() == 2
+        && (!('cep' in endereco) || (endereco.cep is string && endereco.cep.size() <= 9))
+        && (!('logradouro' in endereco) || (endereco.logradouro is string && endereco.logradouro.size() <= 200))
+        && (!('numero' in endereco) || (endereco.numero is string && endereco.numero.size() <= 20))
+        && (!('bairro' in endereco) || (endereco.bairro is string && endereco.bairro.size() <= 120))
+        && (!('cidade' in endereco) || (endereco.cidade is string && endereco.cidade.size() <= 120))
+        && (!('estado' in endereco) || (endereco.estado is string && endereco.estado.size() == 2))
         && (!('complemento' in endereco)
             || (endereco.complemento is string && endereco.complemento.size() <= 120));
     }
@@ -142,7 +138,7 @@ service cloud.firestore {
         && data.preocupacoes.size() > 0 && data.preocupacoes.size() <= 10
         && data.observacoes is string
         && data.observacoes.size() > 0 && data.observacoes.size() <= 1000
-        && isValidEndereco(data.endereco)
+        && (!('endereco' in data) || isValidEndereco(data.endereco))
         && (!('bebeNome' in data)
             || (data.bebeNome is string && data.bebeNome.size() <= 120))
         && (!('periodoContato' in data)

@@ -166,13 +166,13 @@ export type LeadPeriodoContato = 'MANHA' | 'TARDE' | 'NOITE' | 'QUALQUER';
  * espelhado da landing page — alterar aqui exige alterar os tres.
  */
 export interface LeadEndereco {
-  cep: string;
-  logradouro: string;
-  numero: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
   complemento?: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
 }
 
 export interface Lead {
@@ -187,7 +187,7 @@ export interface Lead {
   outroMotivo?: string;
   periodoContato?: LeadPeriodoContato;
   observacoes: string;
-  endereco: LeadEndereco;
+  endereco?: LeadEndereco;
   consentimento: true;
   consentimentoTexto: string;
   status: LeadStatus;

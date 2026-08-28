@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, MessageCircle, UserPlus, X } from 'lucide-react';
-import { Lead, LeadStatus, Patient } from '../types';
+import { Lead, LeadEndereco, LeadStatus, Patient } from '../types';
 import { buildPatientDraft, leadService } from '../services/leadService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -35,6 +35,19 @@ const PERIODO_LABEL: Record<string, string> = {
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, '');
+}
+
+/** Endereco e opcional campo a campo — monta so com o que veio preenchido. */
+export function formatarEndereco(endereco?: LeadEndereco) {
+  if (!endereco) return '';
+  const ruaNumero = [endereco.logradouro, endereco.numero].filter(Boolean).join(', ');
+  const partes = [
+    ruaNumero + (endereco.complemento ? ` - ${endereco.complemento}` : ''),
+    endereco.bairro,
+    [endereco.cidade, endereco.estado].filter(Boolean).join('/'),
+    endereco.cep ? `CEP ${endereco.cep}` : '',
+  ].filter(Boolean);
+  return partes.join(' · ');
 }
 
 export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps) {
@@ -151,12 +164,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             {lead.endereco && (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Endereco</dt>
-                <dd className="text-slate-900 dark:text-slate-100 mt-0.5">
-                  {lead.endereco.logradouro}, {lead.endereco.numero}
-                  {lead.endereco.complemento ? ` - ${lead.endereco.complemento}` : ''}
-                  {' · '}{lead.endereco.bairro} · {lead.endereco.cidade}/{lead.endereco.estado}
-                  {' · CEP '}{lead.endereco.cep}
-                </dd>
+                <dd className="text-slate-900 dark:text-slate-100 mt-0.5">{formatarEndereco(lead.endereco)}</dd>
               </div>
             )}
             {lead.periodoContato && (
