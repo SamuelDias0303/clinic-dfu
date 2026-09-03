@@ -421,32 +421,39 @@ service cloud.firestore {
             || isRecepcao(whitelabelId)
             || therapistCanAccessPatient(whitelabelId)
           );
-        allow create: if tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isRecepcao(whitelabelId)
-            || therapistCanWritePatient(whitelabelId)
+        allow create: if isAdminGlobal()
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isRecepcao(whitelabelId)
+              || therapistCanWritePatient(whitelabelId)
+            )
           );
-        allow update: if existingTenantFieldIsValid(whitelabelId)
-          && tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isRecepcao(whitelabelId)
-            || therapistCanWritePatient(whitelabelId)
+        allow update: if isAdminGlobal()
+          || (
+            existingTenantFieldIsValid(whitelabelId)
+            && tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isRecepcao(whitelabelId)
+              || therapistCanWritePatient(whitelabelId)
+            )
           );
-        allow delete: if isGestor(whitelabelId);
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 
       match /therapists/{therapistId} {
         allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
-        allow create: if isGestor(whitelabelId)
+        allow create: if isAdminGlobal()
+          || isGestor(whitelabelId)
           || (
             signedIn()
             && whitelabelId == 'individual_' + request.auth.uid
             && therapistId == request.auth.token.email
             && request.resource.data.email == request.auth.token.email
           );
-        allow update, delete: if isGestor(whitelabelId);
+        allow update, delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 
       match /appointments/{appointmentId} {
@@ -467,40 +474,46 @@ service cloud.firestore {
               )
             )
           );
-        allow create: if tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isRecepcao(whitelabelId)
-            || (
-              isTerapeuta(whitelabelId)
-              && (
-                request.resource.data.therapistId == request.auth.token.email
-                || request.resource.data.therapistId == request.auth.uid
-                || (
-                  memberData(whitelabelId).therapistId is string
-                  && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+        allow create: if isAdminGlobal()
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isRecepcao(whitelabelId)
+              || (
+                isTerapeuta(whitelabelId)
+                && (
+                  request.resource.data.therapistId == request.auth.token.email
+                  || request.resource.data.therapistId == request.auth.uid
+                  || (
+                    memberData(whitelabelId).therapistId is string
+                    && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+                  )
                 )
               )
             )
           );
-        allow update: if existingTenantFieldIsValid(whitelabelId)
-          && tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isRecepcao(whitelabelId)
-            || (
-              isTerapeuta(whitelabelId)
-              && (
-                request.resource.data.therapistId == request.auth.token.email
-                || request.resource.data.therapistId == request.auth.uid
-                || (
-                  memberData(whitelabelId).therapistId is string
-                  && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+        allow update: if isAdminGlobal()
+          || (
+            existingTenantFieldIsValid(whitelabelId)
+            && tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isRecepcao(whitelabelId)
+              || (
+                isTerapeuta(whitelabelId)
+                && (
+                  request.resource.data.therapistId == request.auth.token.email
+                  || request.resource.data.therapistId == request.auth.uid
+                  || (
+                    memberData(whitelabelId).therapistId is string
+                    && request.resource.data.therapistId == memberData(whitelabelId).therapistId
+                  )
                 )
               )
             )
           );
-        allow delete: if isGestor(whitelabelId) || isRecepcao(whitelabelId);
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId) || isRecepcao(whitelabelId);
       }
 
       match /evolutions/{evolutionId} {
@@ -510,12 +523,15 @@ service cloud.firestore {
             || isGestor(whitelabelId)
             || isTerapeuta(whitelabelId)
           );
-        allow create, update: if tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isTerapeuta(whitelabelId)
+        allow create, update: if isAdminGlobal()
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isTerapeuta(whitelabelId)
+            )
           );
-        allow delete: if isGestor(whitelabelId);
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 
       match /anamneses/{anamneseId} {
@@ -525,17 +541,20 @@ service cloud.firestore {
             || isGestor(whitelabelId)
             || isTerapeuta(whitelabelId)
           );
-        allow create, update: if tenantFieldIsValid(whitelabelId)
-          && (
-            isGestor(whitelabelId)
-            || isTerapeuta(whitelabelId)
+        allow create, update: if isAdminGlobal()
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && (
+              isGestor(whitelabelId)
+              || isTerapeuta(whitelabelId)
+            )
           );
-        allow delete: if isGestor(whitelabelId);
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 
       match /auditLogs/{auditLogId} {
         allow read: if isAdminGlobal() || isGestor(whitelabelId);
-        allow create: if signedIn() && isActiveMember(whitelabelId);
+        allow create: if isAdminGlobal() || (signedIn() && isActiveMember(whitelabelId));
         allow update, delete: if false;
       }
 
