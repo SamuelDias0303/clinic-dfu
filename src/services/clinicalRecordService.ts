@@ -1,5 +1,6 @@
 import {
   addDoc,
+  deleteDoc,
   getDocs,
   limit,
   onSnapshot,
@@ -22,6 +23,11 @@ export const clinicalRecordService = {
   async updateEvolution(id: string, evolution: Partial<Evolution>, whitelabelId?: string | null) {
     const docRef = scopedDoc(COLLECTIONS.evolutions, id, whitelabelId);
     return updateDoc(docRef, withTenantField(evolution, whitelabelId));
+  },
+
+  async deleteEvolution(id: string, whitelabelId?: string | null) {
+    const docRef = scopedDoc(COLLECTIONS.evolutions, id, whitelabelId);
+    return deleteDoc(docRef);
   },
 
   subscribeToEvolutions(

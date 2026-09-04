@@ -13,7 +13,10 @@ import {
   Clock,
   User,
   Bell,
-  MoreVertical
+  MoreVertical,
+  Pencil,
+  Trash2,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Patient, Evolution, Anamnese } from '../types';
@@ -37,6 +40,13 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
   
   // Form states
   const [currentEvolution, setCurrentEvolution] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState('');
+
+  const canManageEvolution =
+    user?.activeRole === 'ADMIN_GLOBAL' ||
+    user?.activeRole === 'GESTOR' ||
+    user?.activeRole === 'TERAPEUTA';
   const [anamneseForm, setAnamneseForm] = useState({
     diagnosis: '',
     mainComplaint: '',
@@ -117,6 +127,49 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
     } catch (error) {
       console.error('Error saving evolution:', error);
       alert('Erro ao salvar evolução.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartEdit = (evo: Evolution) => {
+    setActiveTab('HISTORICO');
+    setEditingId(evo.id ?? null);
+    setEditingContent(evo.content);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingContent('');
+  };
+
+  const handleUpdateEvolution = async (id: string) => {
+    if (!editingContent.trim()) {
+      alert('A evolução não pode ficar vazia.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await clinicalRecordService.updateEvolution(id, { content: editingContent }, user?.activeWhitelabelId);
+      setEditingId(null);
+      setEditingContent('');
+    } catch (error) {
+      console.error('Error updating evolution:', error);
+      alert('Erro ao editar evolução.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteEvolution = async (id: string) => {
+    if (!window.confirm('Excluir esta evolução? Esta ação não pode ser desfeita.')) return;
+    setSaving(true);
+    try {
+      await clinicalRecordService.deleteEvolution(id, user?.activeWhitelabelId);
+      if (editingId === id) handleCancelEdit();
+    } catch (error) {
+      console.error('Error deleting evolution:', error);
+      alert('Erro ao excluir evolução.');
     } finally {
       setSaving(false);
     }
@@ -251,16 +304,65 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
                   ) : (
                     evolutions.map((evo) => (
                       <div key={evo.id} className="p-6 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.date}</span>
-                          <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.time}</span>
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.date}</span>
+                            <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.time}</span>
+                          </div>
+                          {canManageEvolution && evo.id && editingId !== evo.id && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => handleStartEdit(evo)}
+                                className="p-2 rounded-lg text-slate-400 hover:text-[#1e5d8c] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                title="Editar evolução"
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteEvolution(evo.id!)}
+                                disabled={saving}
+                                className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50"
+                                title="Excluir evolução"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <h4 className="text-[#1e5d8c] dark:text-blue-400 font-bold uppercase mb-2">
                           {evo.type} com Dr(a). {evo.therapistName}
                         </h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                          {evo.content}
-                        </p>
+                        {editingId === evo.id ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={editingContent}
+                              onChange={e => setEditingContent(e.target.value)}
+                              className="w-full p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm min-h-[150px] dark:text-white"
+                            />
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => handleUpdateEvolution(evo.id!)}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-[#1e5d8c] text-white rounded-xl font-bold text-sm hover:bg-[#1e5d8c]/90 transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                                SALVAR
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                disabled={saving}
+                                className="flex items-center gap-2 px-6 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl font-bold text-sm hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 disabled:opacity-50"
+                              >
+                                <X size={16} />
+                                CANCELAR
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {evo.content}
+                          </p>
+                        )}
                       </div>
                     ))
                   )}
