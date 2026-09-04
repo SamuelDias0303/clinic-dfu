@@ -531,7 +531,9 @@ service cloud.firestore {
               || isTerapeuta(whitelabelId)
             )
           );
-        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
+        allow delete: if isAdminGlobal()
+          || isGestor(whitelabelId)
+          || isTerapeuta(whitelabelId);
       }
 
       match /anamneses/{anamneseId} {
