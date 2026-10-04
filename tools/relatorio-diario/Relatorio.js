@@ -191,6 +191,228 @@ function somar(resumos) {
   return soma;
 }
 
+// --- Renderizacao ------------------------------------------------------------
+
+var COR = {
+  texto: '#2C3135',
+  suave: '#6B7378',
+  verde: '#5F7A6D',
+  terracota: '#B4533A',
+  fundo: '#F7F3EE',
+  borda: '#E5DED3',
+};
+
+function esc(texto) {
+  return String(texto)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function cartao(rotulo, valor, destaque) {
+  var cor = destaque ? COR.terracota : COR.verde;
+  return (
+    '<td width="33%" style="padding:4px">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ' + COR.borda + ';border-radius:10px">' +
+    '<tr><td align="center" style="padding:12px 4px">' +
+    '<div style="font-size:26px;font-weight:bold;color:' + cor + ';line-height:1.1">' + esc(valor) + '</div>' +
+    '<div style="font-size:11px;color:' + COR.suave + ';text-transform:uppercase;letter-spacing:0.5px;margin-top:4px">' + esc(rotulo) + '</div>' +
+    '</td></tr></table></td>'
+  );
+}
+
+function blocoStatus(resumo) {
+  var celulas = STATUS_ORDEM.map(function (status) {
+    return cartao(STATUS_ROTULO[status], resumo.porStatus[status], status === 'LISTA_ESPERA');
+  });
+  return (
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+    '<tr>' + celulas.slice(0, 3).join('') + '</tr>' +
+    '<tr>' + celulas.slice(3, 6).join('') + '</tr>' +
+    '</table>'
+  );
+}
+
+function blocoBarras(dias) {
+  var maximo = 0;
+  dias.forEach(function (dia) { if (dia.qtd > maximo) maximo = dia.qtd; });
+  var linhas = dias.map(function (dia) {
+    var largura = maximo === 0 ? 0 : Math.max(4, Math.round((dia.qtd / maximo) * 100));
+    var barra = dia.qtd === 0
+      ? ''
+      : '<table role="presentation" width="' + largura + '%" cellpadding="0" cellspacing="0"><tr>' +
+        '<td height="14" bgcolor="' + COR.verde + '" style="background:' + COR.verde + ';border-radius:4px;font-size:0;line-height:0">&nbsp;</td>' +
+        '</tr></table>';
+    return (
+      '<tr>' +
+      '<td width="46" style="font-size:12px;color:' + COR.suave + ';padding:3px 0">' + esc(dia.rotulo) + '</td>' +
+      '<td style="padding:3px 6px">' + barra + '</td>' +
+      '<td width="28" align="right" style="font-size:12px;font-weight:bold;color:' + COR.texto + '">' + dia.qtd + '</td>' +
+      '</tr>'
+    );
+  });
+  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + linhas.join('') + '</table>';
+}
+
+function textoAntiguidade(fila) {
+  return fila.maisAntigaDias === null ? '' : ' · mais antigo há ' + fila.maisAntigaDias + ' dia(s)';
+}
+
+function blocoFila(fila) {
+  if (fila.tamanho === 0) {
+    return '<p style="font-size:14px;color:' + COR.suave + ';margin:0">Ninguém na lista de espera.</p>';
+  }
+  var resumo =
+    '<p style="font-size:14px;color:' + COR.texto + ';margin:0 0 8px">' +
+    fila.tamanho + ' na fila · ' + fila.prioritarios + ' prioritário(s)' + textoAntiguidade(fila) + '</p>';
+  if (fila.top5.length === 0) return resumo;
+  var linhas = fila.top5.map(function (pessoa) {
+    var bebe = pessoa.bebe
+      ? ' <span style="color:' + COR.suave + '">(bebê ' + esc(pessoa.bebe) + ')</span>'
+      : '';
+    var espera = pessoa.esperaDias === null ? '—' : pessoa.esperaDias + ' d';
+    return (
+      '<tr>' +
+      '<td width="28" style="font-size:13px;font-weight:bold;color:' + COR.verde + ';padding:4px 0">' + pessoa.posicao + '</td>' +
+      '<td style="font-size:13px;color:' + COR.texto + ';padding:4px 0">' +
+      (pessoa.prioritario ? '<span style="color:#E0A100">★</span> ' : '') + esc(pessoa.primeiroNome) + bebe + '</td>' +
+      '<td width="50" align="right" style="font-size:12px;color:' + COR.suave + ';padding:4px 0">' + espera + '</td>' +
+      '</tr>'
+    );
+  });
+  return resumo + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' + linhas.join('') + '</table>';
+}
+
+function subtitulo(texto) {
+  return '<div style="font-size:12px;font-weight:bold;letter-spacing:0.5px;text-transform:uppercase;color:' + COR.suave + ';margin:18px 0 8px">' + esc(texto) + '</div>';
+}
+
+function blocoSecao(titulo, resumo) {
+  var rodape =
+    'Depoimentos aguardando moderação: ' + resumo.depoimentosPendentes +
+    ' · Arquivadas: ' + resumo.arquivadas + ' (fora das contagens)' +
+    (resumo.outros > 0 ? ' · Outros status: ' + resumo.outros : '');
+  return (
+    '<div style="margin-top:22px">' +
+    '<div style="font-size:17px;font-weight:bold;color:' + COR.texto + ';border-bottom:2px solid ' + COR.verde + ';padding-bottom:6px">' + esc(titulo) + '</div>' +
+    '<p style="font-size:14px;color:' + COR.texto + ';margin:10px 0">' +
+    '<b>' + resumo.total + '</b> solicitações ativas · <b>' + resumo.novas24h + '</b> nas últimas 24 h</p>' +
+    blocoStatus(resumo) +
+    subtitulo('Últimos 7 dias') +
+    blocoBarras(resumo.dias) +
+    subtitulo('Lista de espera') +
+    blocoFila(resumo.fila) +
+    '<p style="font-size:12px;color:' + COR.suave + ';margin:14px 0 0">' + esc(rodape) + '</p>' +
+    '</div>'
+  );
+}
+
+function renderHtml(ctx) {
+  var corpo = '';
+  if (ctx.consolidado) corpo += blocoSecao('Total consolidado', ctx.consolidado);
+  ctx.secoes.forEach(function (secao) { corpo += blocoSecao(secao.nome, secao.resumo); });
+  return (
+    '<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
+    '<body style="margin:0;padding:0;background:' + COR.fundo + ';font-family:Arial,Helvetica,sans-serif;color:' + COR.texto + '">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:' + COR.fundo + '"><tr><td align="center" style="padding:16px 8px">' +
+    '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:14px"><tr><td style="padding:20px">' +
+    '<div style="font-size:12px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:' + COR.verde + '">Relatório diário</div>' +
+    '<div style="font-size:22px;font-weight:bold;margin:4px 0 0">' + esc(ctx.dataRotulo) + '</div>' +
+    corpo +
+    '<a href="' + esc(ctx.backofficeUrl) + '" style="display:inline-block;margin-top:24px;background:' + COR.terracota + ';color:#ffffff;padding:12px 22px;border-radius:999px;text-decoration:none;font-weight:bold;font-size:14px">Abrir backoffice</a>' +
+    '</td></tr></table></td></tr></table></body></html>'
+  );
+}
+
+function textoSecao(titulo, resumo) {
+  var linhas = [
+    '== ' + titulo + ' ==',
+    'Ativas: ' + resumo.total + ' | Novas nas últimas 24 h: ' + resumo.novas24h,
+    STATUS_ORDEM.map(function (status) { return STATUS_ROTULO[status] + ': ' + resumo.porStatus[status]; }).join(' | '),
+    'Últimos 7 dias: ' + resumo.dias.map(function (dia) { return dia.rotulo + '=' + dia.qtd; }).join(' '),
+  ];
+  if (resumo.fila.tamanho === 0) {
+    linhas.push('Ninguém na lista de espera.');
+  } else {
+    linhas.push('Lista de espera: ' + resumo.fila.tamanho + ' (' + resumo.fila.prioritarios + ' prioritário(s))' + textoAntiguidade(resumo.fila));
+    resumo.fila.top5.forEach(function (pessoa) {
+      linhas.push(
+        pessoa.posicao + '. ' + (pessoa.prioritario ? '★ ' : '') + pessoa.primeiroNome +
+        (pessoa.bebe ? ' (bebê ' + pessoa.bebe + ')' : '') +
+        ' — ' + (pessoa.esperaDias === null ? '—' : pessoa.esperaDias + ' d')
+      );
+    });
+  }
+  linhas.push(
+    'Depoimentos aguardando moderação: ' + resumo.depoimentosPendentes +
+    ' | Arquivadas: ' + resumo.arquivadas + ' (fora das contagens)' +
+    (resumo.outros > 0 ? ' | Outros status: ' + resumo.outros : '')
+  );
+  return linhas.join('\n');
+}
+
+function renderTexto(ctx) {
+  var partes = ['Relatório diário — ' + ctx.dataRotulo];
+  if (ctx.consolidado) partes.push(textoSecao('Total consolidado', ctx.consolidado));
+  ctx.secoes.forEach(function (secao) { partes.push(textoSecao(secao.nome, secao.resumo)); });
+  partes.push('Backoffice: ' + ctx.backofficeUrl);
+  return partes.join('\n\n');
+}
+
+// --- Montagem por destinatario (isolamento) ---------------------------------
+
+/**
+ * `TENANT` recebe somente o whitelabel dele; `GLOBAL` recebe todos (e o total
+ * consolidado quando ha mais de um). Os dados dos outros whitelabels podem
+ * estar em `dados`, mas nunca entram no e-mail de um `TENANT`.
+ */
+function montarEmails(destinatarios, dados, contexto) {
+  var agora = contexto.agora;
+  var offsetMin = contexto.offsetMin;
+  var dia = diaBrasilia(agora, offsetMin);
+  var dataRotulo = dia.slice(8, 10) + '/' + dia.slice(5, 7) + '/' + dia.slice(0, 4);
+
+  return destinatarios.map(function (destinatario) {
+    var escolhidos;
+    if (destinatario.tipo === 'GLOBAL') {
+      escolhidos = dados;
+    } else if (destinatario.tipo === 'TENANT') {
+      escolhidos = dados.filter(function (item) { return item.whitelabelId === destinatario.whitelabelId; });
+      if (escolhidos.length === 0) {
+        throw new Error('Whitelabel nao encontrado para ' + destinatario.email + ': ' + destinatario.whitelabelId);
+      }
+    } else {
+      throw new Error('Tipo de destinatario invalido para ' + destinatario.email + ': ' + destinatario.tipo);
+    }
+
+    var secoes = escolhidos.map(function (item) {
+      return {
+        nome: item.nome || item.whitelabelId,
+        resumo: agregar(item.leads || [], item.depoimentosPendentes, agora, offsetMin),
+      };
+    });
+    var resumos = secoes.map(function (secao) { return secao.resumo; });
+    var consolidado = destinatario.tipo === 'GLOBAL' && secoes.length > 1 ? somar(resumos) : null;
+    var tamanhoFila = resumos.reduce(function (acumulado, resumo) { return acumulado + resumo.fila.tamanho; }, 0);
+
+    var ctx = {
+      dataRotulo: dataRotulo,
+      backofficeUrl: contexto.backofficeUrl,
+      consolidado: consolidado,
+      secoes: secoes,
+    };
+    return {
+      email: destinatario.email,
+      assunto: 'Relatório diário — ' + dataRotulo.slice(0, 5) + ' — Lista de espera: ' + tamanhoFila,
+      html: renderHtml(ctx),
+      texto: renderTexto(ctx),
+    };
+  });
+}
+
 if (typeof module !== 'undefined') {
   module.exports = {
     STATUS_ORDEM: STATUS_ORDEM,
@@ -204,5 +426,9 @@ if (typeof module !== 'undefined') {
     primeiroNome: primeiroNome,
     agregar: agregar,
     somar: somar,
+    esc: esc,
+    renderHtml: renderHtml,
+    renderTexto: renderTexto,
+    montarEmails: montarEmails,
   };
 }

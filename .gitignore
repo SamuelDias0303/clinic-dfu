@@ -18,3 +18,5 @@ serviceAccountKey.json
 
 .vercel
 .firebase
+
+tools/relatorio-diario/preview/

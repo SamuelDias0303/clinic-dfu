@@ -144,4 +144,125 @@ assert.equal(soma.dias.length, 7);
 assert.equal(soma.dias[6].qtd, r.dias[6].qtd + r2.dias[6].qtd);
 assert.deepEqual(soma.fila.top5, []);
 
+// --- montarEmails: isolamento, privacidade, escape (Review Focus 2, 3, 5) --
+const leadRaiza = (id: string, extra: L = {}): L => ({
+  ...lead(id, extra),
+  whatsapp: '+5561999998888',
+  endereco: { logradouro: 'Rua Secreta', cidade: 'Brasilia' },
+});
+
+const dados = [
+  {
+    whitelabelId: 'raiza-fisio',
+    nome: 'Raiza Freitas - Fisioterapia Pediatrica',
+    depoimentosPendentes: 1,
+    leads: [
+      leadRaiza('r1', { status: 'LISTA_ESPERA', prioritario: true, responsavel: 'Ana Souza', bebeNome: 'Sofia', createdAt: '2026-10-01T10:00:00Z' }),
+      leadRaiza('r2', { status: 'LISTA_ESPERA', responsavel: 'Bruna Lima', createdAt: '2026-09-20T10:00:00Z' }),
+      leadRaiza('r3', { status: 'LISTA_ESPERA', responsavel: '<b>Eve</b> & "Cia"', createdAt: '2026-10-02T10:00:00Z' }),
+      leadRaiza('r4', { status: 'NOVO', createdAt: '2026-10-05T12:00:00Z' }),
+    ],
+  },
+  {
+    whitelabelId: 'clinica-beta',
+    nome: 'Clinica Beta',
+    depoimentosPendentes: 0,
+    leads: [
+      leadRaiza('b1', { status: 'LISTA_ESPERA', responsavel: 'Zelia Pereira', createdAt: '2026-10-03T10:00:00Z' }),
+    ],
+  },
+];
+const destinatarios = [
+  { email: 'raiza.fisio@gmail.com', tipo: 'TENANT', whitelabelId: 'raiza-fisio' },
+  { email: 'smdb.ti@gmail.com', tipo: 'GLOBAL' },
+];
+const contexto = { agora: AGORA, backofficeUrl: 'https://clinic-dfu.web.app' };
+const emails = R.montarEmails(destinatarios, dados, contexto);
+
+assert.equal(emails.length, 2);
+const [gestora, admin] = emails;
+assert.equal(gestora.email, 'raiza.fisio@gmail.com');
+assert.equal(admin.email, 'smdb.ti@gmail.com');
+
+// assunto: data de Brasilia e tamanho da fila
+assert.equal(gestora.assunto, 'Relatório diário — 05/10 — Lista de espera: 3');
+assert.equal(admin.assunto, 'Relatório diário — 05/10 — Lista de espera: 4');
+
+// isolamento: a gestora so ve o whitelabel dela (html e texto)
+for (const corpo of [gestora.html, gestora.texto]) {
+  assert.ok(corpo.includes('Raiza Freitas - Fisioterapia Pediatrica'));
+  assert.ok(corpo.includes('Ana'));
+  assert.ok(!corpo.includes('Clinica Beta'));
+  assert.ok(!corpo.includes('Zelia'));
+  assert.ok(!corpo.includes('Total consolidado'));
+}
+// o admin ve todos e o consolidado (ha mais de um whitelabel)
+for (const corpo of [admin.html, admin.texto]) {
+  assert.ok(corpo.includes('Raiza Freitas - Fisioterapia Pediatrica'));
+  assert.ok(corpo.includes('Clinica Beta'));
+  assert.ok(corpo.includes('Zelia'));
+  assert.ok(corpo.includes('Total consolidado'));
+}
+
+// privacidade: sem telefone, endereco nem sobrenome
+for (const corpo of [gestora.html, gestora.texto, admin.html, admin.texto]) {
+  assert.ok(!corpo.includes('5561999998888'));
+  assert.ok(!corpo.includes('Rua Secreta'));
+  assert.ok(!corpo.includes('Souza'));
+  assert.ok(!corpo.includes('Pereira'));
+}
+// primeiro nome + bebe
+assert.ok(gestora.html.includes('Sofia'));
+
+// escape de HTML (Review Focus 3): '<b>Eve</b> & "Cia"' -> primeiro nome '<b>Eve</b>'
+assert.ok(!gestora.html.includes('<b>Eve</b>'));
+assert.ok(gestora.html.includes('&lt;b&gt;Eve&lt;/b&gt;'));
+assert.equal(R.esc('<a href="x">&\'</a>'), '&lt;a href=&quot;x&quot;&gt;&amp;&#39;&lt;/a&gt;');
+
+// documento HTML valido para e-mail: largura 600, link do backoffice, CSS inline
+assert.ok(gestora.html.startsWith('<!doctype html>'));
+assert.ok(gestora.html.includes('max-width:600px'));
+assert.ok(gestora.html.includes('href="https://clinic-dfu.web.app"'));
+assert.ok(!gestora.html.includes('<script'));
+
+// sem dados (Review Focus 5)
+const semDados = R.montarEmails(
+  [{ email: 'raiza.fisio@gmail.com', tipo: 'TENANT', whitelabelId: 'raiza-fisio' }],
+  [{ whitelabelId: 'raiza-fisio', nome: 'Raiza', leads: [], depoimentosPendentes: 0 }],
+  contexto
+);
+assert.equal(semDados[0].assunto, 'Relatório diário — 05/10 — Lista de espera: 0');
+assert.ok(semDados[0].html.includes('Ninguém na lista de espera'));
+assert.ok(semDados[0].texto.includes('Ninguém na lista de espera'));
+
+// GLOBAL com um unico whitelabel: sem bloco consolidado
+const globalUnico = R.montarEmails([{ email: 'smdb.ti@gmail.com', tipo: 'GLOBAL' }], [dados[0]], contexto);
+assert.ok(!globalUnico[0].html.includes('Total consolidado'));
+
+// whitelabel inexistente e tipo invalido falham com mensagem clara
+assert.throws(
+  () => R.montarEmails([{ email: 'x@y.com', tipo: 'TENANT', whitelabelId: 'nao-existe' }], dados, contexto),
+  /nao-existe/
+);
+assert.throws(
+  () => R.montarEmails([{ email: 'x@y.com', tipo: 'OUTRO' }], dados, contexto),
+  /OUTRO/
+);
+
+// dados estranhos nao derrubam (Review Focus 4): sem createdAt, status desconhecido, responsavel vazio
+const estranhos = R.montarEmails(
+  [{ email: 'smdb.ti@gmail.com', tipo: 'GLOBAL' }],
+  [{
+    whitelabelId: 'w', nome: undefined, depoimentosPendentes: undefined,
+    leads: [
+      { id: '1', status: 'LISTA_ESPERA', responsavel: '', createdAt: null },
+      { id: '2', status: 'ESTRANHO' },
+      { id: '3', status: 'LISTA_ESPERA', responsavel: 'Dani', bebeNome: undefined, createdAt: 'lixo' },
+    ],
+  }],
+  contexto
+);
+assert.ok(estranhos[0].html.includes('Dani'));
+assert.ok(estranhos[0].html.includes('—'));
+
 console.log('OK: relatorio (nucleo puro).');
