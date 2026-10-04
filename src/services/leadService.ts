@@ -82,6 +82,11 @@ export const leadService = {
     await this.updateLead(id, { status }, whitelabelId);
   },
 
+  /** "Deleta" de forma reversivel: o lead some das listas, mas o status e o historico ficam. */
+  async setArquivado(id: string, arquivado: boolean, whitelabelId?: string | null) {
+    await this.updateLead(id, { arquivado }, whitelabelId);
+  },
+
   /**
    * Cria o paciente no whitelabel e marca o lead como convertido.
    * `patientData` vem preenchido/conferido pela tela, nao inferido aqui.

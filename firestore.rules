@@ -155,11 +155,13 @@ service cloud.firestore {
     // preserva a integridade da prova de consentimento.
     function isValidLeadTriage() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'notasInternas', 'convertedPatientId', 'prioritario', 'updatedAt', 'whitelabelId'])
+        .hasOnly(['status', 'notasInternas', 'convertedPatientId', 'prioritario', 'arquivado', 'updatedAt', 'whitelabelId'])
         && request.resource.data.status in
              ['NOVO', 'LISTA_ESPERA', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO']
         && (!('prioritario' in request.resource.data)
             || request.resource.data.prioritario is bool)
+        && (!('arquivado' in request.resource.data)
+            || request.resource.data.arquivado is bool)
         && (!('notasInternas' in request.resource.data)
             || (request.resource.data.notasInternas is string
                 && request.resource.data.notasInternas.size() <= 2000));

@@ -9,7 +9,7 @@ import LeadDetailModal, { formatarEndereco } from '../components/LeadDetailModal
 import SiteContentEditor from '../components/SiteContentEditor';
 import DepoimentosModeracao from '../components/DepoimentosModeracao';
 import ListaEsperaView from '../components/ListaEsperaView';
-import { ordenarFila } from '../lib/listaEspera';
+import { arquivados, naoArquivados, ordenarFila } from '../lib/listaEspera';
 
 type Tab = 'SOLICITACOES' | 'LISTA_ESPERA' | 'DEPOIMENTOS' | 'CONTEUDO';
 
@@ -81,7 +81,7 @@ export default function CaptacaoView() {
   const [tab, setTab] = useState<Tab>('SOLICITACOES');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<LeadStatus | 'TODOS'>('TODOS');
+  const [filter, setFilter] = useState<LeadStatus | 'TODOS' | 'ARQUIVADAS'>('TODOS');
   const [selected, setSelected] = useState<Lead | null>(null);
   const [depoimentosPendentes, setDepoimentosPendentes] = useState(0);
 
@@ -103,12 +103,17 @@ export default function CaptacaoView() {
     return () => unsubscribe();
   }, [whitelabelId]);
 
-  const novos = useMemo(() => leads.filter((lead) => lead.status === 'NOVO').length, [leads]);
+  const ativos = useMemo(() => naoArquivados(leads), [leads]);
+  const arquivadas = useMemo(() => arquivados(leads), [leads]);
+  const novos = useMemo(() => ativos.filter((lead) => lead.status === 'NOVO').length, [ativos]);
   const fila = useMemo(() => ordenarFila(leads), [leads]);
-  const visible = useMemo(
-    () => (filter === 'TODOS' ? leads : leads.filter((lead) => lead.status === filter)),
-    [leads, filter]
-  );
+  // "Todos" e os filtros por status escondem arquivados; "Lista de espera" segue a ordem da fila.
+  const visible = useMemo(() => {
+    if (filter === 'ARQUIVADAS') return arquivadas;
+    if (filter === 'LISTA_ESPERA') return fila;
+    if (filter === 'TODOS') return ativos;
+    return ativos.filter((lead) => lead.status === filter);
+  }, [ativos, arquivadas, fila, filter]);
 
   const handleExportCsv = () => {
     const blob = new Blob(['﻿', toCsv(visible)], { type: 'text/csv;charset=utf-8' });
@@ -173,7 +178,7 @@ export default function CaptacaoView() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-1.5">
-              {(['TODOS', 'NOVO', 'LISTA_ESPERA', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO'] as const).map((option) => (
+              {(['TODOS', 'NOVO', 'LISTA_ESPERA', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO', 'ARQUIVADAS'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"
@@ -184,7 +189,11 @@ export default function CaptacaoView() {
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
-                  {option === 'TODOS' ? 'Todos' : STATUS_META[option].label}
+                  {option === 'TODOS'
+                    ? 'Todos'
+                    : option === 'ARQUIVADAS'
+                      ? `Arquivadas${arquivadas.length ? ` (${arquivadas.length})` : ''}`
+                      : STATUS_META[option].label}
                 </button>
               ))}
             </div>
@@ -203,7 +212,9 @@ export default function CaptacaoView() {
               <p className="text-slate-500 dark:text-slate-400">
                 {leads.length === 0
                   ? 'Nenhuma solicitacao recebida pelo site ainda.'
-                  : 'Nenhuma solicitacao neste status.'}
+                  : filter === 'ARQUIVADAS'
+                    ? 'Nenhuma solicitacao arquivada.'
+                    : 'Nenhuma solicitacao neste status.'}
               </p>
             </div>
           ) : (
@@ -212,6 +223,7 @@ export default function CaptacaoView() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50 dark:bg-slate-800/60">
                     <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
+                      {filter === 'LISTA_ESPERA' && <th className="px-4 py-3 font-semibold">#</th>}
                       <th className="px-4 py-3 font-semibold">Responsavel</th>
                       <th className="px-4 py-3 font-semibold">WhatsApp</th>
                       <th className="px-4 py-3 font-semibold">Bebe</th>
@@ -221,13 +233,17 @@ export default function CaptacaoView() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {visible.map((lead) => (
+                    {visible.map((lead, index) => (
                       <tr
                         key={lead.id}
                         onClick={() => setSelected(lead)}
                         className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40"
                       >
+                        {filter === 'LISTA_ESPERA' && (
+                          <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">{index + 1}</td>
+                        )}
                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                          {lead.prioritario && <span className="text-amber-500 mr-1" title="Prioritario">★</span>}
                           {lead.responsavel}
                         </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{lead.whatsapp}</td>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, MessageCircle, UserPlus, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Loader2, MessageCircle, Trash2, UserPlus, X } from 'lucide-react';
 import { Lead, LeadEndereco, LeadStatus, Patient } from '../types';
 import { buildPatientDraft, leadService } from '../services/leadService';
 import { useAuth } from '../contexts/AuthContext';
@@ -54,6 +54,8 @@ export function formatarEndereco(endereco?: LeadEndereco) {
 export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps) {
   const { user } = useAuth();
   const whitelabelId = user?.activeWhitelabelId;
+  // Mesma regra do Firestore: excluir de vez so GESTOR/ADMIN_GLOBAL; arquivar, quem faz a triagem.
+  const podeExcluir = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR';
 
   const [status, setStatus] = useState<LeadStatus>(lead.status);
   const [notas, setNotas] = useState(lead.notasInternas ?? '');
@@ -83,6 +85,49 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     } catch (err) {
       console.error(err);
       setError('Nao foi possivel salvar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleArquivar = async (arquivar: boolean) => {
+    if (!lead.id) return;
+    if (
+      arquivar &&
+      !window.confirm(`Arquivar a solicitacao de ${lead.responsavel}? Ela some das listas e pode ser restaurada em "Arquivadas".`)
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await leadService.setArquivado(lead.id, arquivar, whitelabelId);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError(arquivar ? 'Nao foi possivel arquivar. Tente novamente.' : 'Nao foi possivel restaurar. Tente novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleExcluir = async () => {
+    if (!lead.id) return;
+    if (
+      !window.confirm(
+        `Excluir DEFINITIVAMENTE a solicitacao de ${lead.responsavel}? Isso apaga os dados e nao pode ser desfeito.`
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await leadService.deleteLead(lead.id, whitelabelId);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Nao foi possivel excluir. Verifique suas permissoes.');
     } finally {
       setSaving(false);
     }
@@ -156,6 +201,14 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 ))}
               </dd>
             </div>
+            {lead.arquivado && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Situacao</dt>
+                <dd className="text-slate-600 dark:text-slate-300 mt-0.5 font-semibold">
+                  Arquivada — nao aparece nas listas. Restaure para voltar.
+                </dd>
+              </div>
+            )}
             {lead.prioritario && (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Prioridade</dt>
@@ -279,6 +332,39 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-800 p-5">
+          <div className="mr-auto flex flex-wrap items-center gap-2">
+            {lead.arquivado ? (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => handleArquivar(false)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60"
+                >
+                  <ArchiveRestore size={16} /> Restaurar
+                </button>
+                {podeExcluir && (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={handleExcluir}
+                    className="inline-flex items-center gap-2 rounded-lg border border-rose-300 dark:border-rose-900 px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-60"
+                  >
+                    <Trash2 size={16} /> Excluir definitivamente
+                  </button>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => handleArquivar(true)}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-60"
+              >
+                <Archive size={16} /> Arquivar
+              </button>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}

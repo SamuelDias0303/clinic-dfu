@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Star } from 'lucide-react';
+import { Archive, MessageCircle, Star } from 'lucide-react';
 import { Lead } from '../types';
 import { leadService } from '../services/leadService';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +36,23 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
     } catch (err) {
       console.error(err);
       setErro('Nao foi possivel alterar a prioridade.');
+    } finally {
+      setProcessandoId(null);
+    }
+  };
+
+  const arquivar = async (lead: Lead) => {
+    if (!lead.id) return;
+    if (!window.confirm(`Arquivar ${lead.responsavel}? Sai da lista de espera e pode ser restaurado em Solicitacoes > Arquivadas.`)) {
+      return;
+    }
+    setProcessandoId(lead.id);
+    setErro(null);
+    try {
+      await leadService.setArquivado(lead.id, true, whitelabelId);
+    } catch (err) {
+      console.error(err);
+      setErro('Nao foi possivel arquivar.');
     } finally {
       setProcessandoId(null);
     }
@@ -154,6 +171,16 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
                           className="rounded-lg border border-emerald-600 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 disabled:opacity-50"
                         >
                           Chamar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={processandoId === lead.id}
+                          onClick={() => arquivar(lead)}
+                          aria-label="Arquivar"
+                          title="Arquivar (sai da lista, pode restaurar depois)"
+                          className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          <Archive size={18} />
                         </button>
                       </div>
                     </td>

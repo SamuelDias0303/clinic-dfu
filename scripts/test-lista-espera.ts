@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { linkChamar, mensagemChamar, ordenarFila } from '../src/lib/listaEspera';
+import { arquivados, linkChamar, mensagemChamar, naoArquivados, ordenarFila } from '../src/lib/listaEspera';
 import type { Lead } from '../src/types';
 
 const data = (iso: string) => ({ toDate: () => new Date(iso) });
@@ -71,6 +71,31 @@ assert.deepEqual(
 
 // Fila vazia
 assert.deepEqual(ordenarFila([]), []);
+
+// Arquivado sai da fila, mesmo prioritario, e volta quando restaurado
+assert.deepEqual(
+  ids(ordenarFila([
+    lead({ id: 'arq', arquivado: true, prioritario: true, createdAt: data('2026-09-01T10:00:00Z') }),
+    lead({ id: 'ativo', createdAt: data('2026-10-01T10:00:00Z') }),
+  ])),
+  ['ativo']
+);
+assert.deepEqual(
+  ids(ordenarFila([lead({ id: 'restaurado', arquivado: false, createdAt: data('2026-10-01T10:00:00Z') })])),
+  ['restaurado']
+);
+
+// naoArquivados / arquivados: particao por `arquivado` (ausente = ativo), sem mexer na ordem
+const misto = [
+  lead({ id: '1', status: 'NOVO' }),
+  lead({ id: '2', arquivado: true, status: 'NOVO' }),
+  lead({ id: '3', arquivado: false, status: 'EM_CONTATO' }),
+  lead({ id: '4', arquivado: true, status: 'LISTA_ESPERA' }),
+];
+assert.deepEqual(ids(naoArquivados(misto)), ['1', '3']);
+assert.deepEqual(ids(arquivados(misto)), ['2', '4']);
+assert.deepEqual(ids(naoArquivados([])), []);
+assert.deepEqual(ids(arquivados([])), []);
 
 // Mensagem de chamada: com bebe, sem preposicao de genero
 assert.equal(

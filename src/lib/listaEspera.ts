@@ -10,13 +10,22 @@ function dataEntrada(lead: Lead): number {
   return data ? data.getTime() : SEM_DATA;
 }
 
+/** Ativos: `arquivado` ausente ou false. Mantem a ordem recebida. */
+export function naoArquivados(leads: Lead[]): Lead[] {
+  return leads.filter((lead) => !lead.arquivado);
+}
+
+export function arquivados(leads: Lead[]): Lead[] {
+  return leads.filter((lead) => lead.arquivado === true);
+}
+
 /**
- * Fila da lista de espera: so quem esta em LISTA_ESPERA; prioritarios primeiro;
- * dentro de cada grupo, quem entrou antes. Nao depende do interruptor
- * `agenda.lotada` — desligar o interruptor nao esvazia a fila.
+ * Fila da lista de espera: so quem esta em LISTA_ESPERA e nao arquivado;
+ * prioritarios primeiro; dentro de cada grupo, quem entrou antes. Nao depende
+ * do interruptor `agenda.lotada` — desligar o interruptor nao esvazia a fila.
  */
 export function ordenarFila(leads: Lead[]): Lead[] {
-  return leads
+  return naoArquivados(leads)
     .filter((lead) => lead.status === STATUS_LISTA_ESPERA)
     .sort((a, b) => {
       if (Boolean(a.prioritario) !== Boolean(b.prioritario)) return a.prioritario ? -1 : 1;

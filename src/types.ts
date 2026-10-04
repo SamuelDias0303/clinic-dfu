@@ -194,6 +194,8 @@ export interface Lead {
   notasInternas?: string;
   /** Marcado so pelo backoffice (nunca pelo publico): sobe o lead na lista de espera. */
   prioritario?: boolean;
+  /** "Deletado" reversivel: some da lista de espera e das Solicitacoes; filtro "Arquivadas" restaura. */
+  arquivado?: boolean;
   convertedPatientId?: string;
   createdAt?: any;
   updatedAt?: any;
