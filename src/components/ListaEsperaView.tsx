@@ -44,10 +44,19 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
   const chamar = async (lead: Lead) => {
     if (!lead.id) return;
     if (!window.confirm(`Chamar ${lead.responsavel} pelo WhatsApp e tirar da lista de espera?`)) return;
-    setProcessandoId(lead.id);
     setErro(null);
-    // Abre antes do await: navegadores bloqueiam janela aberta depois de operacao assincrona.
-    window.open(linkChamar(lead), '_blank', 'noopener');
+    // Abre antes do await (navegadores bloqueiam janela aberta depois de operacao
+    // assincrona). Sem `noopener` na chamada: com ele `window.open` sempre devolve
+    // null e nao da pra saber se o pop-up foi bloqueado. So tira o lead da fila
+    // se a janela realmente abriu.
+    const janela = window.open('', '_blank');
+    if (!janela) {
+      setErro('O navegador bloqueou a janela do WhatsApp. Libere pop-ups para este site e tente de novo.');
+      return;
+    }
+    janela.opener = null;
+    janela.location.href = linkChamar(lead);
+    setProcessandoId(lead.id);
     try {
       await leadService.updateStatus(lead.id, 'EM_CONTATO', whitelabelId);
     } catch (err) {
@@ -63,7 +72,8 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
           Fila de quem preencheu o formulario com a agenda lotada. Contatos que chegaram so pelo
-          WhatsApp nao aparecem aqui — cadastre manualmente se quiser incluir.
+          WhatsApp nao aparecem aqui — para incluir alguem, abra a solicitacao em Solicitacoes e
+          mude o status para Lista de espera.
         </p>
         <button
           type="button"
