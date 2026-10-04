@@ -8,13 +8,19 @@ import { useAuth } from '../contexts/AuthContext';
 import LeadDetailModal, { formatarEndereco } from '../components/LeadDetailModal';
 import SiteContentEditor from '../components/SiteContentEditor';
 import DepoimentosModeracao from '../components/DepoimentosModeracao';
+import ListaEsperaView from '../components/ListaEsperaView';
+import { ordenarFila } from '../lib/listaEspera';
 
-type Tab = 'SOLICITACOES' | 'DEPOIMENTOS' | 'CONTEUDO';
+type Tab = 'SOLICITACOES' | 'LISTA_ESPERA' | 'DEPOIMENTOS' | 'CONTEUDO';
 
 const STATUS_META: Record<LeadStatus, { label: string; chip: string }> = {
   NOVO: {
     label: 'Novo',
     chip: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-400',
+  },
+  LISTA_ESPERA: {
+    label: 'Lista de espera',
+    chip: 'bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-400',
   },
   EM_CONTATO: {
     label: 'Em contato',
@@ -46,7 +52,7 @@ const FAIXA_LABEL: Record<string, string> = {
 function toCsv(leads: Lead[]) {
   const header = [
     'Data', 'Responsavel', 'WhatsApp', 'Bebe', 'Idade', 'Preocupacoes', 'Outro motivo',
-    'Periodo', 'Gestacao e parto', 'Endereco', 'Status', 'Origem',
+    'Periodo', 'Gestacao e parto', 'Endereco', 'Status', 'Prioritario', 'Origem',
   ];
   const escape = (value: string) => `"${String(value ?? '').replace(/"/g, '""')}"`;
   const rows = leads.map((lead) => [
@@ -61,6 +67,7 @@ function toCsv(leads: Lead[]) {
     lead.observacoes ?? '',
     formatarEndereco(lead.endereco),
     STATUS_META[lead.status]?.label ?? lead.status,
+    lead.prioritario ? 'Sim' : '',
     lead.origem,
   ].map(escape).join(','));
 
@@ -97,6 +104,7 @@ export default function CaptacaoView() {
   }, [whitelabelId]);
 
   const novos = useMemo(() => leads.filter((lead) => lead.status === 'NOVO').length, [leads]);
+  const fila = useMemo(() => ordenarFila(leads), [leads]);
   const visible = useMemo(
     () => (filter === 'TODOS' ? leads : leads.filter((lead) => lead.status === filter)),
     [leads, filter]
@@ -126,7 +134,8 @@ export default function CaptacaoView() {
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800">
         {([
           ['SOLICITACOES', `Solicitacoes${novos ? ` (${novos})` : ''}`],
-          ['DEPOIMENTOS', `Depoimentos${depoimentosPendentes ? ` (${depoimentosPendentes})` : ''}`],
+          ['LISTA_ESPERA', `Lista de espera${fila.length ? ` (${fila.length})` : ''}`],
+          ['DEPOIMENTOS',`Depoimentos${depoimentosPendentes ? ` (${depoimentosPendentes})` : ''}`],
           ['CONTEUDO', 'Conteudo do site'],
         ] as [Tab, string][]).map(([id, label]) => (
           <button
@@ -148,6 +157,14 @@ export default function CaptacaoView() {
         <SiteContentEditor />
       ) : tab === 'DEPOIMENTOS' ? (
         <DepoimentosModeracao />
+      ) : tab === 'LISTA_ESPERA' ? (
+        loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="animate-spin text-primary" size={32} />
+          </div>
+        ) : (
+          <ListaEsperaView fila={fila} onSelect={setSelected} />
+        )
       ) : loading ? (
         <div className="flex justify-center items-center py-12">
           <Loader2 className="animate-spin text-primary" size={32} />
@@ -156,7 +173,7 @@ export default function CaptacaoView() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-1.5">
-              {(['TODOS', 'NOVO', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO'] as const).map((option) => (
+              {(['TODOS', 'NOVO', 'LISTA_ESPERA', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO'] as const).map((option) => (
                 <button
                   key={option}
                   type="button"

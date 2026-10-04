@@ -11,6 +11,7 @@ interface LeadDetailModalProps {
 
 const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
   { value: 'NOVO', label: 'Novo' },
+  { value: 'LISTA_ESPERA', label: 'Lista de espera' },
   { value: 'EM_CONTATO', label: 'Em contato' },
   { value: 'AGENDADO', label: 'Agendado' },
   { value: 'CONVERTIDO', label: 'Convertido' },
@@ -155,6 +156,12 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 ))}
               </dd>
             </div>
+            {lead.prioritario && (
+              <div className="sm:col-span-2">
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Prioridade</dt>
+                <dd className="text-amber-600 dark:text-amber-400 mt-0.5 font-semibold">Prioritario na lista de espera</dd>
+              </div>
+            )}
             {lead.outroMotivo && (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Outro motivo</dt>
