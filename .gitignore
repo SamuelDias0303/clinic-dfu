@@ -20,3 +20,6 @@ serviceAccountKey.json
 .firebase
 
 tools/relatorio-diario/preview/
+
+# Chaves de conta de servico do Google Cloud: nunca versionar
+clinic-dfu-*.json
