@@ -133,7 +133,8 @@ function agregar(leads, depoimentosPendentes, agora, offsetMin) {
     return {
       posicao: indice + 1,
       primeiroNome: primeiroNome(lead.responsavel),
-      bebe: lead.bebeNome ? String(lead.bebeNome).trim() : '',
+      // So o primeiro nome: o bebe costuma vir com o sobrenome da familia.
+      bebe: lead.bebeNome && String(lead.bebeNome).trim() ? primeiroNome(lead.bebeNome) : '',
       esperaDias: tempo === SEM_DATA ? null : Math.max(0, Math.floor((agoraMs - tempo) / MS_DIA)),
       prioritario: Boolean(lead.prioritario),
     };

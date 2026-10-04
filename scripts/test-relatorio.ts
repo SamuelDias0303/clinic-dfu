@@ -94,6 +94,13 @@ assert.deepEqual(r.fila.top5[0], {
 });
 assert.equal(r.fila.top5[2].esperaDias, null);     // sem createdAt
 
+// nome do bebe: so o primeiro nome; vazio/espacos viram ''
+assert.equal(
+  R.agregar([lead('s', { status: 'LISTA_ESPERA', bebeNome: '  Sofia   Souza  ' })], 0, AGORA).fila.top5[0].bebe,
+  'Sofia'
+);
+assert.equal(R.agregar([lead('s', { status: 'LISTA_ESPERA', bebeNome: '   ' })], 0, AGORA).fila.top5[0].bebe, '');
+
 // virada do dia: 23:30 BRT do dia 05 (= 02:30Z do dia 06) conta no dia 05 e nas 24h
 const noite = R.agregar([lead('n', { createdAt: '2026-10-06T02:30:00Z' })], 0, new Date('2026-10-06T10:00:00Z'));
 assert.equal(noite.dias[6].dia, '2026-10-06');     // "hoje" para quem le as 07:00 BRT de 06/10
@@ -157,7 +164,8 @@ const dados = [
     nome: 'Raiza Freitas - Fisioterapia Pediatrica',
     depoimentosPendentes: 1,
     leads: [
-      leadRaiza('r1', { status: 'LISTA_ESPERA', prioritario: true, responsavel: 'Ana Souza', bebeNome: 'Sofia', createdAt: '2026-10-01T10:00:00Z' }),
+      // bebe com sobrenome da familia: so o primeiro nome pode ir no e-mail
+      leadRaiza('r1', { status: 'LISTA_ESPERA', prioritario: true, responsavel: 'Ana Souza', bebeNome: 'Sofia Souza Lima', createdAt: '2026-10-01T10:00:00Z' }),
       leadRaiza('r2', { status: 'LISTA_ESPERA', responsavel: 'Bruna Lima', createdAt: '2026-09-20T10:00:00Z' }),
       leadRaiza('r3', { status: 'LISTA_ESPERA', responsavel: '<b>Eve</b> & "Cia"', createdAt: '2026-10-02T10:00:00Z' }),
       leadRaiza('r4', { status: 'NOVO', createdAt: '2026-10-05T12:00:00Z' }),
@@ -210,6 +218,7 @@ for (const corpo of [gestora.html, gestora.texto, admin.html, admin.texto]) {
   assert.ok(!corpo.includes('Rua Secreta'));
   assert.ok(!corpo.includes('Souza'));
   assert.ok(!corpo.includes('Pereira'));
+  assert.ok(!corpo.includes('Lima'));              // sobrenome do bebe (Sofia Souza Lima) nao vaza
 }
 // primeiro nome + bebe
 assert.ok(gestora.html.includes('Sofia'));

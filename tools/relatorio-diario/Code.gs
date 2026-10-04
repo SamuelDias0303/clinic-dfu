@@ -22,7 +22,13 @@ function base64Url_(valor) {
 function gerarToken_() {
   var bruto = PropertiesService.getScriptProperties().getProperty('SA_KEY');
   if (!bruto) throw new Error('Propriedade SA_KEY nao configurada.');
-  var chave = JSON.parse(bruto);
+  var chave;
+  try {
+    chave = JSON.parse(bruto);
+  } catch (erro) {
+    // Nao repassar `erro.message`: no V8 ele pode trazer um trecho do texto (da chave) analisado.
+    throw new Error('SA_KEY nao e um JSON valido: cole o conteudo inteiro do arquivo .json da chave.');
+  }
   var agora = Math.floor(Date.now() / 1000);
   var entrada =
     base64Url_(JSON.stringify({ alg: 'RS256', typ: 'JWT' })) + '.' +
@@ -90,8 +96,12 @@ function coletarDados_(destinatarios) {
   if (global) {
     ids = Object.keys(mapaNomes);
   } else {
+    // So ids que existem de verdade: listar uma subcolecao inexistente devolve 200 vazio e
+    // viraria um relatorio zerado em silencio. Um id errado fica de fora, e montarEmails falha.
     destinatarios.forEach(function (d) {
-      if (ids.indexOf(d.whitelabelId) === -1) ids.push(d.whitelabelId);
+      if (ids.indexOf(d.whitelabelId) === -1 && Object.prototype.hasOwnProperty.call(mapaNomes, d.whitelabelId)) {
+        ids.push(d.whitelabelId);
+      }
     });
   }
 

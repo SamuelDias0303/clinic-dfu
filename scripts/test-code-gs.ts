@@ -15,11 +15,15 @@ const pasta = resolve(process.cwd(), 'tools', 'relatorio-diario');
 const codigo = readFileSync(resolve(pasta, 'Relatorio.js'), 'utf8') + '\n' + readFileSync(resolve(pasta, 'Code.gs'), 'utf8');
 
 const DOC = 'projects/clinic-dfu/databases/(default)/documents';
+// Campos como o Firestore REST os devolve: createdAt e um timestampValue de verdade.
+const campoRest = (k: string, v: unknown) =>
+  typeof v === 'boolean' ? { booleanValue: v } : k === 'createdAt' ? { timestampValue: String(v) } : { stringValue: String(v) };
 const leadDoc = (wl: string, id: string, f: Record<string, unknown>) => ({
   name: `${DOC}/whitelabels/${wl}/leads/${id}`,
-  fields: Object.fromEntries(Object.entries(f).map(([k, v]) => [
-    k, typeof v === 'boolean' ? { booleanValue: v } : { stringValue: String(v) },
-  ])),
+  // whatsapp e endereco existem no banco: a mascara de campos do Code.gs tem que impedir que cheguem
+  fields: Object.fromEntries(
+    Object.entries({ whatsapp: '+5561999998888', observacoes: 'dado sensivel', ...f }).map(([k, v]) => [k, campoRest(k, v)])
+  ),
 });
 const wlDoc = (id: string, name: string) => ({ name: `${DOC}/whitelabels/${id}`, fields: { name: { stringValue: name } } });
 
@@ -47,17 +51,19 @@ const CONFIG_COMPLETA = {
   ],
 };
 
-interface Opcoes { config?: unknown; falhaEnvioPara?: string; statusToken?: number }
+interface Opcoes { config?: unknown; falhaEnvioPara?: string; statusToken?: number; saKeyBruta?: string }
 
 function criarAmbiente(opcoes: Opcoes = {}) {
   const props = new Map<string, string>([
-    ['SA_KEY', JSON.stringify({ client_email: 'sa@clinic-dfu.iam.gserviceaccount.com', private_key: 'CHAVE-SECRETA-NAO-VAZAR' })],
+    ['SA_KEY', opcoes.saKeyBruta ?? JSON.stringify({ client_email: 'sa@clinic-dfu.iam.gserviceaccount.com', private_key: 'CHAVE-SECRETA-NAO-VAZAR' })],
     ['CONFIG', JSON.stringify(opcoes.config ?? CONFIG_COMPLETA)],
   ]);
   const cache = new Map<string, string>();
   const enviados: { to: string; subject: string; htmlBody: string; body: string }[] = [];
   const urls: string[] = [];
   const pedidosToken: string[] = [];
+  const assertions: string[] = [];
+  const assinaturas: { entrada: string; chave: string }[] = [];
   const gatilhos = { removidos: 0, criados: [] as string[][], existentes: [] as { getHandlerFunction: () => string }[] };
 
   const resposta = (codigoHttp: number, corpo: unknown) => ({
@@ -76,24 +82,35 @@ function criarAmbiente(opcoes: Opcoes = {}) {
     CacheService: { getScriptCache: () => ({ get: (k: string) => cache.get(k) ?? null, put: (k: string, v: string) => { cache.set(k, v); } }) },
     Utilities: {
       base64EncodeWebSafe: (v: string | number[]) => Buffer.from(v as never).toString('base64').replace(/\+/g, '-').replace(/\//g, '_'),
-      computeRsaSha256Signature: () => [1, 2, 3],
+      computeRsaSha256Signature: (entrada: string, chave: string) => {
+        assinaturas.push({ entrada, chave });
+        return [1, 2, 3];
+      },
     },
     UrlFetchApp: {
-      fetch: (url: string, init: { headers?: { Authorization?: string } } = {}) => {
+      fetch: (url: string, init: { headers?: { Authorization?: string }; payload?: { assertion?: string } } = {}) => {
         if (url.startsWith('https://oauth2.googleapis.com/token')) {
           pedidosToken.push(url);
+          if (init.payload?.assertion) assertions.push(init.payload.assertion);
           return resposta(opcoes.statusToken ?? 200, opcoes.statusToken && opcoes.statusToken !== 200 ? { error: 'x' } : { access_token: 'tok' });
         }
         urls.push(url);
         assert.equal(init.headers?.Authorization, 'Bearer tok');
         const [caminho, consulta] = url.split('/documents/')[1].split('?');
-        const dados = FIRESTORE[caminho];
-        if (!dados) return resposta(404, {});
+        // Como o Firestore real: colecao inexistente devolve 200 com lista vazia (nao 404).
+        const dados = FIRESTORE[caminho] ?? { pagina1: [] };
         const params = new URLSearchParams(consulta);
+        // Aplica a mascara: so devolve os campos pedidos em mask.fieldPaths.
+        const mascara = params.getAll('mask.fieldPaths');
+        const filtrar = (docs: unknown[]) => docs.map((d) => {
+          const doc = d as { name: string; fields?: Record<string, unknown> };
+          if (mascara.length === 0) return doc;
+          return { ...doc, fields: Object.fromEntries(Object.entries(doc.fields ?? {}).filter(([k]) => mascara.includes(k))) };
+        });
         if (!params.get('pageToken')) {
-          return resposta(200, { documents: dados.pagina1, ...(dados.pagina2 ? { nextPageToken: 'p2' } : {}) });
+          return resposta(200, { documents: filtrar(dados.pagina1), ...(dados.pagina2 ? { nextPageToken: 'p2' } : {}) });
         }
-        return resposta(200, { documents: dados.pagina2 ?? [] });
+        return resposta(200, { documents: filtrar(dados.pagina2 ?? []) });
       },
     },
     MailApp: {
@@ -120,7 +137,7 @@ function criarAmbiente(opcoes: Opcoes = {}) {
   };
   vm.createContext(contexto);
   vm.runInContext(codigo, contexto);
-  return { ctx: contexto as Record<string, (...a: unknown[]) => unknown>, props, enviados, urls, pedidosToken, gatilhos };
+  return { ctx: contexto as Record<string, (...a: unknown[]) => unknown>, props, enviados, urls, pedidosToken, assertions, assinaturas, gatilhos };
 }
 
 const hoje = R.diaBrasilia(new Date());
@@ -143,10 +160,38 @@ const hoje = R.diaBrasilia(new Date());
   // trava de um envio por dia gravada para os dois
   assert.equal(a.props.get('ultimoEnvio:raiza.fisio@gmail.com'), hoje);
   assert.equal(a.props.get('ultimoEnvio:smdb.ti@gmail.com'), hoje);
-  // token pedido uma vez so (cache) e Firestore lido com mascara de campos, sem dados sensiveis
+  // token pedido uma vez so (cache)
   assert.equal(a.pedidosToken.length, 1);
-  assert.ok(a.urls.every((u) => !/whatsapp|endereco|observacoes/i.test(u)));
-  assert.ok(a.urls.filter((u) => u.includes('/leads?')).every((u) => u.includes('mask.fieldPaths=status')));
+
+  // o pedido de token e um JWT bem formado (header.claims.assinatura) com as claims certas
+  const partes = a.assertions[0].split('.');
+  assert.equal(partes.length, 3);
+  const decodificar = (s: string) => JSON.parse(Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+  assert.deepEqual(decodificar(partes[0]), { alg: 'RS256', typ: 'JWT' });
+  const claims = decodificar(partes[1]);
+  assert.equal(claims.iss, 'sa@clinic-dfu.iam.gserviceaccount.com');
+  assert.equal(claims.scope, 'https://www.googleapis.com/auth/datastore');
+  assert.equal(claims.aud, 'https://oauth2.googleapis.com/token');
+  assert.equal(claims.exp - claims.iat, 3600);
+  assert.ok(partes[2].length > 0 && !partes[2].includes('='));          // assinatura em base64url sem padding
+  // assinou exatamente "header.claims" com a private_key da propriedade
+  assert.deepEqual(a.assinaturas, [{ entrada: `${partes[0]}.${partes[1]}`, chave: 'CHAVE-SECRETA-NAO-VAZAR' }]);
+
+  // mascara: leads sao lidos com EXATAMENTE estes 6 campos (whatsapp/observacoes nunca saem do banco)
+  const camposLead = ['arquivado', 'bebeNome', 'createdAt', 'prioritario', 'responsavel', 'status'];
+  const urlsLeads = a.urls.filter((u) => /\/leads\?/.test(u));
+  assert.ok(urlsLeads.length >= 3);                                      // raiza (2 paginas) + beta
+  for (const u of urlsLeads) {
+    assert.deepEqual(new URLSearchParams(u.split('?')[1]).getAll('mask.fieldPaths').sort(), camposLead);
+  }
+  // mesmo com whatsapp/observacoes no banco, nada disso chega ao e-mail
+  for (const email of a.enviados) {
+    assert.ok(!email.htmlBody.includes('5561999998888'));
+    assert.ok(!email.body.includes('5561999998888'));
+    assert.ok(!email.htmlBody.includes('dado sensivel'));
+  }
+  // timestamps reais (timestampValue) foram decodificados: a fila tem "mais antigo ha N dia(s)"
+  assert.ok(/mais antigo há \d+ dia\(s\)/.test(gestora.htmlBody));
 
   // 2) Segunda execucao no mesmo dia nao reenvia nem le o banco
   const leituras = a.urls.length;
@@ -187,6 +232,26 @@ const hoje = R.diaBrasilia(new Date());
   a.ctx.enviarRelatorio();
   assert.equal(a.enviados.length, 1);
   assert.ok(a.urls.every((u) => !u.includes('clinica-beta/')));
+}
+
+// 6b) TENANT com whitelabelId inexistente/errado: falha com mensagem clara, nunca um relatorio zerado
+{
+  const a = criarAmbiente({
+    config: { backofficeUrl: 'https://clinic-dfu.web.app', destinatarios: [{ email: 'raiza.fisio@gmail.com', tipo: 'TENANT', whitelabelId: 'raiza-fisio ' }] },
+  });
+  assert.throws(() => a.ctx.enviarRelatorio(), /raiza-fisio /);
+  assert.equal(a.enviados.length, 0);
+  assert.equal(a.props.get('ultimoEnvio:raiza.fisio@gmail.com'), undefined);
+}
+
+// 6c) SA_KEY colada corrompida: o erro nao pode carregar trecho da chave (vai para log e e-mail de falha)
+{
+  const a = criarAmbiente({ saKeyBruta: '{"private_key": TRECHO-SECRETO-DA-CHAVE}' });
+  assert.throws(() => a.ctx.enviarRelatorio(), (erro: Error) => {
+    assert.match(erro.message, /SA_KEY/);
+    assert.ok(!erro.message.includes('TRECHO-SECRETO-DA-CHAVE'));
+    return true;
+  });
 }
 
 // 7) testarSemEnviar nao envia nada

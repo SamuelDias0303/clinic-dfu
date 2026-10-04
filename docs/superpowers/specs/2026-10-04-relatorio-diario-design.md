@@ -83,7 +83,7 @@ Corpo em HTML (600 px de largura, legível no celular) e versão em texto simple
 - Um e-mail por destinatário, cada um com o seu escopo. Falha ao montar ou enviar para um destinatário não impede os demais; a falha é registrada e relançada no fim para o Google avisar a dona do script.
 - **Idempotência**: guarda `ultimoEnvio:<email>` (data no fuso de Brasília) nas Propriedades do Script; o gatilho não reenvia no mesmo dia. `enviarRelatorio({ forcar: true })` ignora essa trava (para testes).
 - Função `testarSemEnviar()` monta os e-mails e registra no log (assunto e contagens), sem enviar nada.
-- Gatilho: `ScriptApp.newTrigger('enviarRelatorio').timeBased().atHour(20).nearMinute(0).everyDays(1).create()`, o que dispara dentro de ~15 minutos de 20:00. Notificação de falha do gatilho: "Notificar imediatamente".
+- Gatilho: `ScriptApp.newTrigger('enviarRelatorio').timeBased().atHour(20).nearMinute(0).everyDays(1).create()`, o que dispara perto das 20:00. O Google não garante o minuto: a janela pode chegar a cerca de 1 hora (observar o horário real no primeiro dia). Notificação de falha do gatilho: "Notificar imediatamente".
 - Cotas gratuitas folgadas: `MailApp` (100 destinatários/dia em conta Gmail comum) e `UrlFetchApp` (20.000 chamadas/dia). A leitura do Firestore é paginada.
 
 ## 6. Entregáveis em `clinic-dfu/tools/relatorio-diario/`

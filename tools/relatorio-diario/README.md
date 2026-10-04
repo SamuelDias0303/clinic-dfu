@@ -69,7 +69,8 @@ Depois de colar `SA_KEY`, **apague o arquivo `.json` baixado** do computador (e 
 
 ## Operação
 
-- **Horário:** o gatilho dispara dentro de ~15 minutos de 20:00.
+- **Horário:** o gatilho dispara perto das 20:00, mas o Google não garante o minuto: a execução pode atrasar
+  (a janela pode chegar a cerca de 1 hora). Observe o primeiro dia para ver o horário real de chegada.
 - **Não duplica:** cada destinatário recebe no máximo um e-mail por dia; `enviarAgoraForcando` ignora a trava.
 - **Falha:** se um envio falhar, o Google avisa por e-mail a conta dona do script. Um destinatário com erro não impede os outros,
   e no dia seguinte (ou numa nova execução) só quem falhou é reenviado.
