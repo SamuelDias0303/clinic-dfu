@@ -35,7 +35,7 @@ Gatilho diário (Apps Script, ~20:00)
 
 - `Code.gs`: autenticação, leitura paginada do Firestore, decodificação dos valores REST, envio, gatilho, idempotência.
 - `Relatorio.js`: **lógica pura** (sem Apps Script, sem rede). Roda igual no Apps Script e no Node, por isso é testável localmente. Exporta com `if (typeof module !== 'undefined') module.exports = {...}`.
-- Whitelabels: `GLOBAL` lista a coleção `whitelabels` e lê cada um; `TENANT` lê **somente** o `whitelabelId` configurado. O código de um destinatário `TENANT` nunca carrega dados de outro whitelabel.
+- Whitelabels: se há destinatário `GLOBAL` no envio, a execução lista a coleção `whitelabels` e lê todos; senão lê só os `whitelabelId` configurados. O e-mail de um destinatário `TENANT` é montado **somente** com o whitelabel dele (garantido por teste): os dados dos outros podem ter sido lidos na mesma execução, mas nunca entram no e-mail dele.
 
 ## 2. Acesso e segredos
 
