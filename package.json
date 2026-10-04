@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "test:local": "tsx scripts/test-firestore-payloads.ts",
+    "test:fila": "tsx scripts/test-lista-espera.ts",
     "admin:grant": "tsx scripts/grant-admin.ts",
     "admin:audit": "tsx scripts/audit-user-profiles.ts",
     "backup": "tsx scripts/backup-firestore.ts",
