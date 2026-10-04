@@ -9,6 +9,11 @@ import SiteImagesPanel from './SiteImagesPanel';
 const inputClass =
   'w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none';
 
+/** Conteudo publicado antes da secao `agenda` existir nao a tem — completa com o padrao (desligada). */
+function comAgendaPadrao(content: SiteContent): SiteContent {
+  return { ...content, agenda: content.agenda ?? { lotada: false } };
+}
+
 function Field({
   label,
   value,
@@ -173,7 +178,7 @@ export default function SiteContentEditor() {
     siteContentService
       .getContent(whitelabelId)
       .then((content) => {
-        if (active) setDraft(content);
+        if (active) setDraft(content ? comAgendaPadrao(content) : content);
       })
       .catch((error) => {
         console.error(error);
@@ -223,7 +228,7 @@ export default function SiteContentEditor() {
       if (!parsed.hero || !parsed.imagens) {
         throw new Error('Estrutura invalida');
       }
-      setDraft(parsed);
+      setDraft(comAgendaPadrao(parsed));
       setMessage({ tone: 'ok', text: 'JSON carregado. Revise e clique em Publicar para salvar.' });
     } catch (error) {
       console.error(error);
@@ -321,6 +326,32 @@ export default function SiteContentEditor() {
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Dica: trechos entre <code>*asteriscos*</code> aparecem destacados no site.
           </p>
+
+          <Section
+            title="Agenda"
+            description="Liga a lista de espera: com a agenda lotada, o site deixa de prometer vaga."
+            defaultOpen
+          >
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={draft.agenda.lotada}
+                onChange={(e) => patch('agenda', { ...draft.agenda, lotada: e.target.checked })}
+                className="mt-1 w-4 h-4"
+              />
+              <span className="text-sm text-slate-700 dark:text-slate-200">
+                <strong>Agenda lotada</strong> — todos os botoes de agendamento viram "Entrar na lista de espera".
+                Depois de marcar, clique em Publicar.
+              </span>
+            </label>
+            <Field
+              label="Mensagem de confirmacao (opcional)"
+              value={draft.agenda.mensagem ?? ''}
+              rows={2}
+              hint="Aparece depois que a pessoa entra na lista. Vazio usa o texto padrao."
+              onChange={(v) => patch('agenda', { ...draft.agenda, mensagem: v })}
+            />
+          </Section>
 
           <Section title="Topo da pagina" description="Primeira dobra: badge, titulo e botoes." defaultOpen>
             <Field label="Badge" value={draft.hero.badge} onChange={(v) => patch('hero', { ...draft.hero, badge: v })} />
