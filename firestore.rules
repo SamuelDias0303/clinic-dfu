@@ -122,7 +122,7 @@ service cloud.firestore {
       return data.keys().hasOnly(leadAllowedKeys())
         && data.keys().hasAll(leadRequiredKeys())
         && data.whitelabelId == whitelabelId
-        && data.status == 'NOVO'
+        && data.status in ['NOVO', 'LISTA_ESPERA']
         && data.consentimento == true
         && data.createdAt == request.time
         && data.origem is string
@@ -155,9 +155,11 @@ service cloud.firestore {
     // preserva a integridade da prova de consentimento.
     function isValidLeadTriage() {
       return request.resource.data.diff(resource.data).affectedKeys()
-        .hasOnly(['status', 'notasInternas', 'convertedPatientId', 'updatedAt', 'whitelabelId'])
+        .hasOnly(['status', 'notasInternas', 'convertedPatientId', 'prioritario', 'updatedAt', 'whitelabelId'])
         && request.resource.data.status in
-             ['NOVO', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO']
+             ['NOVO', 'LISTA_ESPERA', 'EM_CONTATO', 'AGENDADO', 'CONVERTIDO', 'DESCARTADO']
+        && (!('prioritario' in request.resource.data)
+            || request.resource.data.prioritario is bool)
         && (!('notasInternas' in request.resource.data)
             || (request.resource.data.notasInternas is string
                 && request.resource.data.notasInternas.size() <= 2000));

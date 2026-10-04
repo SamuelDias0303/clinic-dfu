@@ -148,7 +148,7 @@ export interface Anamnese {
   updatedAt?: any;
 }
 
-export type LeadStatus = 'NOVO' | 'EM_CONTATO' | 'AGENDADO' | 'CONVERTIDO' | 'DESCARTADO';
+export type LeadStatus = 'NOVO' | 'LISTA_ESPERA' | 'EM_CONTATO' | 'AGENDADO' | 'CONVERTIDO' | 'DESCARTADO';
 
 export type LeadFaixaIdade = '0-1m' | '1-3m' | '3-6m' | '6-12m' | '12-24m' | 'outra';
 
@@ -192,6 +192,8 @@ export interface Lead {
   consentimentoTexto: string;
   status: LeadStatus;
   notasInternas?: string;
+  /** Marcado so pelo backoffice (nunca pelo publico): sobe o lead na lista de espera. */
+  prioritario?: boolean;
   convertedPatientId?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -367,6 +369,11 @@ export interface SiteContent {
     descricao: string;
     ogTitulo: string;
     ogDescricao: string;
+  };
+  /** Interruptor da lista de espera: lotada = todos os CTAs viram "entrar na lista". */
+  agenda: {
+    lotada: boolean;
+    mensagem?: string;
   };
   imagens: Record<SiteImageSlot, SiteImageRef>;
   atualizadoEm?: any;
