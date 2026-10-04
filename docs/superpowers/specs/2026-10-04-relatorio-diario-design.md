@@ -15,7 +15,7 @@ Sem custo: o projeto Firebase está no plano Spark (sem Cloud Functions agendada
 ## Decisões confirmadas
 
 1. Alternativa C: Google Apps Script com gatilho diário e `MailApp`.
-2. Dona do script e remetente: a conta Google `raiza.fisio@gmail.com`.
+2. Dona do script e remetente: a conta Google `smdb.ti@gmail.com` (admin global). O e-mail chega para a gestora vindo dessa conta.
 3. Destinatários e escopo (configuração, não código):
    - `raiza.fisio@gmail.com` → tipo `TENANT`, `whitelabelId: raiza-fisio`.
    - `smdb.ti@gmail.com` → tipo `GLOBAL`.
@@ -53,7 +53,8 @@ Gatilho diário (Apps Script, ~20:00)
 ```
 
 - Escopos do `appsscript.json`: `https://www.googleapis.com/auth/script.send_mail` e `https://www.googleapis.com/auth/script.external_request`. Fuso do projeto: `America/Sao_Paulo`.
-- A chave JSON precisa chegar à dona do script (`raiza.fisio@gmail.com`). Entrega por canal seguro (gerenciador de senhas ou compartilhamento temporário), nunca por e-mail ou chat em texto. Se vazar: apagar a chave no console do Google Cloud e gerar outra. O dano máximo é leitura do Firestore.
+- A chave JSON é criada e colada nas Propriedades do Script pela mesma pessoa (`smdb.ti@gmail.com` é a dona do script e do projeto Google Cloud), sem passar de mão em mão. Depois de colada, apagar o arquivo `.json` baixado. Se a chave vazar: apagá-la no console do Google Cloud e gerar outra. O dano máximo é leitura do Firestore.
+- Como o script é do admin global, o remetente do e-mail da gestora é `smdb.ti@gmail.com`. Se a Raíza estranhar o remetente, ela pode marcá-lo como contato conhecido; não afeta a segurança.
 
 ## 3. Conteúdo do relatório
 
@@ -94,8 +95,8 @@ Corpo em HTML (600 px de largura, legível no celular) e versão em texto simple
 
 ### Passo a passo da configuração manual (README)
 
-1. (Você, no console do Google Cloud do projeto `clinic-dfu`) IAM → Contas de serviço → criar `relatorio-leitura` com o papel **Leitor do Cloud Datastore** → Chaves → criar chave JSON.
-2. (Dona do script, `raiza.fisio@gmail.com`) em script.google.com, criar um projeto; colar `Relatorio.js` e `Code.gs`; ajustar o manifesto com `appsscript.json`.
+1. (`smdb.ti@gmail.com`, no console do Google Cloud do projeto `clinic-dfu`) IAM → Contas de serviço → criar `relatorio-leitura` com o papel **Leitor do Cloud Datastore** → Chaves → criar chave JSON.
+2. (Dona do script, `smdb.ti@gmail.com`) em script.google.com, criar um projeto; colar `Relatorio.js` e `Code.gs`; ajustar o manifesto com `appsscript.json`.
 3. Propriedades do Script: `SA_KEY` (JSON da chave) e `CONFIG` (JSON acima).
 4. Rodar `testarSemEnviar` (autorizar os escopos), conferir o log; rodar `enviarRelatorio` com `forcar` e conferir os dois e-mails.
 5. Rodar `criarGatilhoDiario` uma vez e ativar a notificação de falha.
