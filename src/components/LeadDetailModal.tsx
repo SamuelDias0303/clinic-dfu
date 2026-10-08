@@ -1,8 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Archive, ArchiveRestore, Loader2, MessageCircle, Trash2, UserPlus, X } from 'lucide-react';
-import { Lead, LeadEndereco, LeadStatus, Patient } from '../types';
-import { buildPatientDraft, leadService } from '../services/leadService';
+import { Lead, LeadStatus, Patient } from '../types';
+import { leadService } from '../services/leadService';
 import { useAuth } from '../contexts/AuthContext';
+import {
+  formatarEndereco,
+  montarAntecedentesPessoais,
+  montarRascunhoPaciente,
+} from '../lib/conversaoLead';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -38,24 +43,14 @@ function onlyDigits(value: string) {
   return value.replace(/\D/g, '');
 }
 
-/** Endereco e opcional campo a campo — monta so com o que veio preenchido. */
-export function formatarEndereco(endereco?: LeadEndereco) {
-  if (!endereco) return '';
-  const ruaNumero = [endereco.logradouro, endereco.numero].filter(Boolean).join(', ');
-  const partes = [
-    ruaNumero + (endereco.complemento ? ` - ${endereco.complemento}` : ''),
-    endereco.bairro,
-    [endereco.cidade, endereco.estado].filter(Boolean).join('/'),
-    endereco.cep ? `CEP ${endereco.cep}` : '',
-  ].filter(Boolean);
-  return partes.join(' · ');
-}
-
 export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps) {
   const { user } = useAuth();
   const whitelabelId = user?.activeWhitelabelId;
   // Mesma regra do Firestore: excluir de vez so GESTOR/ADMIN_GLOBAL; arquivar, quem faz a triagem.
   const podeExcluir = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR';
+  // Espelha as regras de `anamneses`: so GESTOR, TERAPEUTA e ADMIN_GLOBAL gravam. A recepcao converte sem anamnese.
+  const podeGravarAnamnese =
+    user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR' || user?.activeRole === 'TERAPEUTA';
 
   const [status, setStatus] = useState<LeadStatus>(lead.status);
   const [notas, setNotas] = useState(lead.notasInternas ?? '');
@@ -64,8 +59,13 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
 
   const [showConvert, setShowConvert] = useState(false);
   const [patientDraft, setPatientDraft] = useState<Omit<Patient, 'id' | 'createdAt'>>(
-    buildPatientDraft(lead)
+    montarRascunhoPaciente(lead)
   );
+  const [antecedentes, setAntecedentes] = useState(montarAntecedentesPessoais(lead));
+  // O `lead` da prop nao se atualiza depois de converter: guardamos aqui o que acabou de acontecer.
+  const [convertidoAgora, setConvertidoAgora] = useState(false);
+  const [avisoAnamnese, setAvisoAnamnese] = useState<string | null>(null);
+  const jaConvertido = Boolean(lead.convertedPatientId) || convertidoAgora;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -142,7 +142,21 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     setSaving(true);
     setError(null);
     try {
-      await leadService.convertToPatient(lead.id, patientDraft, whitelabelId);
+      const resultado = await leadService.convertToPatient(
+        lead.id,
+        patientDraft,
+        whitelabelId,
+        podeGravarAnamnese ? antecedentes : undefined
+      );
+      if (resultado.anamnese === 'FALHOU') {
+        // O paciente existe; so a anamnese nao foi gravada. Nao fecha: mostra o texto para copiar.
+        setConvertidoAgora(true);
+        setShowConvert(false);
+        setAvisoAnamnese(
+          'Paciente criado, mas nao foi possivel preencher a anamnese. Copie o texto abaixo e cole em Antecedentes Pessoais, na anamnese do paciente.'
+        );
+        return;
+      }
       onClose();
     } catch (err) {
       console.error(err);
@@ -289,15 +303,30 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             </div>
           </div>
 
-          {lead.convertedPatientId ? (
-            <p className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-              Ja convertido em paciente.
-            </p>
+          {jaConvertido ? (
+            <div className="space-y-3">
+              <p className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
+                Ja convertido em paciente.
+              </p>
+              {avisoAnamnese && (
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-3 space-y-2">
+                  <p className="text-xs text-amber-800 dark:text-amber-300">{avisoAnamnese}</p>
+                  <textarea
+                    readOnly
+                    value={antecedentes}
+                    rows={5}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className="w-full rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+              )}
+            </div>
           ) : showConvert ? (
             <div className="border-t border-slate-200 dark:border-slate-800 pt-5 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Confira os dados antes de criar o paciente. CPF, nascimento e endereco nao vem do
-                formulario e podem ser preenchidos agora ou depois no cadastro.
+                Confira os dados antes de criar o paciente. Nome da mae e endereco vem do formulario
+                (edite se quem preencheu foi o pai). CPF e nascimento nao vem do formulario e podem
+                ser preenchidos agora ou depois no cadastro.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input
@@ -324,7 +353,34 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                   placeholder="Nome do pai"
                   className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
                 />
+                <input
+                  value={patientDraft.address}
+                  onChange={(e) => setPatientDraft({ ...patientDraft, address: e.target.value })}
+                  placeholder="Endereco"
+                  className="sm:col-span-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
+                />
               </div>
+              {podeGravarAnamnese ? (
+                <label className="block">
+                  <span className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+                    Antecedentes pessoais (vai para a anamnese do paciente)
+                  </span>
+                  <textarea
+                    value={antecedentes}
+                    onChange={(e) => setAntecedentes(e.target.value)}
+                    rows={5}
+                    placeholder="Vazio: a anamnese nao e criada agora."
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
+                  />
+                </label>
+              ) : (
+                antecedentes && (
+                  <p className="rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+                    O relato de gestacao e parto e as preocupacoes informadas no site permanecem nesta
+                    solicitacao. Um gestor ou terapeuta pode copia-los para a anamnese.
+                  </p>
+                )
+              )}
             </div>
           ) : null}
 
@@ -370,9 +426,9 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
-            Cancelar
+            {convertidoAgora ? 'Fechar' : 'Cancelar'}
           </button>
-          {!lead.convertedPatientId && !showConvert && (
+          {!jaConvertido && !showConvert && (
             <button
               type="button"
               onClick={() => setShowConvert(true)}
@@ -381,15 +437,18 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
               <UserPlus size={16} /> Converter em paciente
             </button>
           )}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={showConvert ? handleConvert : handleSaveTriage}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {saving && <Loader2 className="animate-spin" size={16} />}
-            {showConvert ? 'Criar paciente' : 'Salvar'}
-          </button>
+          {/* Depois de converter, "Salvar" regravaria o status antigo (a prop `lead` esta defasada). */}
+          {!convertidoAgora && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={showConvert ? handleConvert : handleSaveTriage}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              {saving && <Loader2 className="animate-spin" size={16} />}
+              {showConvert ? 'Criar paciente' : 'Salvar'}
+            </button>
+          )}
         </div>
       </div>
     </div>

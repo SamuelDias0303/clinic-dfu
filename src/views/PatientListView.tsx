@@ -62,7 +62,8 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.cpf.includes(searchTerm) ||
-      p.email.toLowerCase().includes(searchTerm.toLowerCase());
+      p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.motherName ?? '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesTherapist = selectedTherapistId === 'all' || p.therapistId === selectedTherapistId;
     
@@ -133,6 +134,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="px-6 py-3">Paciente</th>
+                <th className="px-6 py-3">Mãe</th>
                 <th className="px-6 py-3">Contato</th>
                 <th className="px-6 py-3">Convênio</th>
                 {user?.activeRole === 'GESTOR' && <th className="px-6 py-3">Terapeuta</th>}
@@ -143,13 +145,13 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan={user?.activeRole === 'GESTOR' ? 6 : 5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={user?.activeRole === 'GESTOR' ? 7 : 6} className="px-6 py-12 text-center text-slate-400 text-sm">
                     Carregando pacientes...
                   </td>
                 </tr>
               ) : filteredPatients.length === 0 ? (
                 <tr>
-                  <td colSpan={user?.activeRole === 'GESTOR' ? 6 : 5} className="px-6 py-12 text-center text-slate-400 text-sm">
+                  <td colSpan={user?.activeRole === 'GESTOR' ? 7 : 6} className="px-6 py-12 text-center text-slate-400 text-sm">
                     Nenhum paciente encontrado.
                   </td>
                 </tr>
@@ -166,6 +168,9 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                           <div className="text-xs text-slate-500 dark:text-slate-400">CPF: {patient.cpf}</div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300 font-medium">
+                      {patient.motherName?.trim() || '—'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">{patient.phone}</div>
@@ -246,6 +251,10 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="col-span-2">
+                    <div className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[9px] tracking-tight">Mãe</div>
+                    <div className="text-slate-700 dark:text-slate-300 font-medium">{patient.motherName?.trim() || '—'}</div>
+                  </div>
                   <div>
                     <div className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[9px] tracking-tight">Contato</div>
                     <div className="text-slate-700 dark:text-slate-300 font-medium">{patient.phone}</div>

@@ -9,25 +9,13 @@ import {
 import { Lead, LeadStatus, Patient } from '../types';
 import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './serviceScope';
 import { patientService } from './patientService';
+import { clinicalRecordService } from './clinicalRecordService';
 
-/**
- * Rascunho de paciente a partir de um lead.
- *
- * Deliberadamente NAO adivinha se o responsavel e mae ou pai, nem inventa CPF,
- * data de nascimento ou endereco. Quem converte completa esses campos na tela —
- * paciente e dado clinico e nao deve nascer com informacao presumida.
- */
-export function buildPatientDraft(lead: Lead): Omit<Patient, 'id' | 'createdAt'> {
-  return {
-    name: lead.bebeNome?.trim() || `Bebe de ${lead.responsavel}`,
-    cpf: '',
-    birthDate: '',
-    phone: lead.whatsapp,
-    email: '',
-    healthPlan: '',
-    address: '',
-    status: 'Ativo',
-  };
+/** Resultado da conversao: o paciente sempre existe; a anamnese e "melhor esforco". */
+export interface ConversaoResultado {
+  patientId: string;
+  /** NAO_SOLICITADA: sem texto de antecedentes; CRIADA: gravada; FALHOU: paciente criado, anamnese nao. */
+  anamnese: 'NAO_SOLICITADA' | 'CRIADA' | 'FALHOU';
 }
 
 export const leadService = {
@@ -90,19 +78,38 @@ export const leadService = {
   /**
    * Cria o paciente no whitelabel e marca o lead como convertido.
    * `patientData` vem preenchido/conferido pela tela, nao inferido aqui.
+   *
+   * `antecedentesPessoais` (opcional) preenche o campo "Antecedentes Pessoais" da
+   * anamnese do paciente novo. So quem pode gravar anamnese (GESTOR, TERAPEUTA,
+   * ADMIN_GLOBAL) deve passa-lo. Se a anamnese falhar, o paciente NAO e desfeito:
+   * o resultado avisa e a tela mostra o texto para copiar.
    */
   async convertToPatient(
     leadId: string,
     patientData: Omit<Patient, 'id' | 'createdAt'>,
-    whitelabelId?: string | null
-  ) {
+    whitelabelId?: string | null,
+    antecedentesPessoais?: string
+  ): Promise<ConversaoResultado> {
     const patientId = await patientService.createPatient(patientData, whitelabelId);
     await this.updateLead(
       leadId,
       { status: 'CONVERTIDO', convertedPatientId: patientId },
       whitelabelId
     );
-    return patientId;
+
+    const texto = antecedentesPessoais?.trim();
+    if (!texto) return { patientId, anamnese: 'NAO_SOLICITADA' };
+
+    try {
+      await clinicalRecordService.saveAnamnese(
+        { patientId, mainComplaint: '', hda: '', personalHistory: texto, familyHistory: '' },
+        whitelabelId
+      );
+      return { patientId, anamnese: 'CRIADA' };
+    } catch (erro) {
+      console.error('Paciente criado, mas a anamnese nao foi gravada:', erro);
+      return { patientId, anamnese: 'FALHOU' };
+    }
   },
 
   async deleteLead(id: string, whitelabelId?: string | null) {
