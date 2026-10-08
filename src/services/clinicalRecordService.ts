@@ -58,6 +58,48 @@ export const clinicalRecordService = {
     });
   },
 
+  /** Leitura unica de todas as anamneses do whitelabel (o painel de completar convertidos). */
+  async listarAnamneses(whitelabelId?: string | null): Promise<Anamnese[]> {
+    const snapshot = await getDocs(query(scopedCollection(COLLECTIONS.anamneses, whitelabelId)));
+    return snapshot.docs.map((item) => ({ ...item.data(), id: item.id })) as Anamnese[];
+  },
+
+  /**
+   * Preenche "Antecedentes Pessoais" sem sobrescrever nada: cria a anamnese se nao
+   * existe; se existe com o campo vazio, grava SO esse campo (queixa, HDA e
+   * antecedentes familiares ficam intactos); se o campo ja tem texto, nao toca.
+   * Diferente de `saveAnamnese`, que regrava a anamnese inteira.
+   */
+  async preencherAntecedentes(
+    patientId: string,
+    texto: string,
+    whitelabelId?: string | null
+  ): Promise<'CRIADA' | 'PREENCHIDA' | 'JA_PREENCHIDA'> {
+    const snapshot = await getDocs(
+      query(scopedCollection(COLLECTIONS.anamneses, whitelabelId), where('patientId', '==', patientId), limit(1))
+    );
+
+    if (snapshot.empty) {
+      await addDoc(scopedCollection(COLLECTIONS.anamneses, whitelabelId), {
+        ...withTenantField(
+          { patientId, mainComplaint: '', hda: '', personalHistory: texto, familyHistory: '' },
+          whitelabelId
+        ),
+        updatedAt: serverTimestamp(),
+      });
+      return 'CRIADA';
+    }
+
+    const existente = snapshot.docs[0];
+    if (String(existente.data().personalHistory ?? '').trim()) return 'JA_PREENCHIDA';
+
+    await updateDoc(scopedDoc(COLLECTIONS.anamneses, existente.id, whitelabelId), {
+      ...withTenantField({ personalHistory: texto }, whitelabelId),
+      updatedAt: serverTimestamp(),
+    });
+    return 'PREENCHIDA';
+  },
+
   async saveAnamnese(anamnese: Omit<Anamnese, 'id' | 'updatedAt'>, whitelabelId?: string | null) {
     const q = query(
       scopedCollection(COLLECTIONS.anamneses, whitelabelId),

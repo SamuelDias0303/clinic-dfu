@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, UserCheck } from 'lucide-react';
 import { Lead, LeadStatus } from '../types';
 import { leadService } from '../services/leadService';
 import { testimonialService } from '../services/testimonialService';
 import { useAuth } from '../contexts/AuthContext';
 import LeadDetailModal from '../components/LeadDetailModal';
+import CompletarConvertidosModal from '../components/CompletarConvertidosModal';
 import { formatarEndereco } from '../lib/conversaoLead';
 import SiteContentEditor from '../components/SiteContentEditor';
 import DepoimentosModeracao from '../components/DepoimentosModeracao';
@@ -84,6 +85,9 @@ export default function CaptacaoView() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<LeadStatus | 'TODOS' | 'ARQUIVADAS'>('TODOS');
   const [selected, setSelected] = useState<Lead | null>(null);
+  const [completando, setCompletando] = useState(false);
+  // So quem pode gravar em pacientes E anamneses (regras do Firestore): gestor e admin global.
+  const podeCompletarConvertidos = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR';
   const [depoimentosPendentes, setDepoimentosPendentes] = useState(0);
 
   useEffect(() => {
@@ -198,14 +202,25 @@ export default function CaptacaoView() {
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={handleExportCsv}
-              disabled={visible.length === 0}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
-            >
-              <Download size={14} /> Exportar CSV
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              {podeCompletarConvertidos && (
+                <button
+                  type="button"
+                  onClick={() => setCompletando(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  <UserCheck size={14} /> Completar dados dos convertidos
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={visible.length === 0}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50"
+              >
+                <Download size={14} /> Exportar CSV
+              </button>
+            </div>
           </div>
 
           {visible.length === 0 ? (
@@ -275,6 +290,7 @@ export default function CaptacaoView() {
         </>
       )}
 
+      {completando && <CompletarConvertidosModal leads={leads} onClose={() => setCompletando(false)} />}
       {selected && <LeadDetailModal lead={selected} onClose={() => setSelected(null)} />}
     </motion.div>
   );

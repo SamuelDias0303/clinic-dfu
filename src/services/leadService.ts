@@ -10,12 +10,23 @@ import { Lead, LeadStatus, Patient } from '../types';
 import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './serviceScope';
 import { patientService } from './patientService';
 import { clinicalRecordService } from './clinicalRecordService';
+import type { AjusteConversao } from '../lib/conversaoLead';
 
 /** Resultado da conversao: o paciente sempre existe; a anamnese e "melhor esforco". */
 export interface ConversaoResultado {
   patientId: string;
   /** NAO_SOLICITADA: sem texto de antecedentes; CRIADA: gravada; FALHOU: paciente criado, anamnese nao. */
   anamnese: 'NAO_SOLICITADA' | 'CRIADA' | 'FALHOU';
+}
+
+export interface ResultadoAplicacao {
+  leadId: string;
+  patientId: string;
+  pacienteNome: string;
+  ok: boolean;
+  /** O que de fato foi gravado (pode ser menos que o previsto se alguem preencheu no meio tempo). */
+  feito: string[];
+  erro?: string;
 }
 
 export const leadService = {
@@ -110,6 +121,49 @@ export const leadService = {
       console.error('Paciente criado, mas a anamnese nao foi gravada:', erro);
       return { patientId, anamnese: 'FALHOU' };
     }
+  },
+
+  /**
+   * Aplica os ajustes escolhidos na previa ("completar convertidos"), um paciente por vez.
+   * Cada gravacao REVERIFICA o banco e so preenche o que continua vazio; a falha de um
+   * paciente nao impede os outros.
+   */
+  async aplicarAjustes(ajustes: AjusteConversao[], whitelabelId?: string | null): Promise<ResultadoAplicacao[]> {
+    const resultados: ResultadoAplicacao[] = [];
+    for (const ajuste of ajustes) {
+      const feito: string[] = [];
+      try {
+        if (ajuste.motherName || ajuste.address) {
+          const gravado = await patientService.completarCadastro(
+            ajuste.patientId,
+            { motherName: ajuste.motherName, address: ajuste.address },
+            whitelabelId
+          );
+          if (gravado.motherName) feito.push('nome da mae');
+          if (gravado.address) feito.push('endereco');
+        }
+        if (ajuste.antecedentes) {
+          const situacao = await clinicalRecordService.preencherAntecedentes(
+            ajuste.patientId,
+            ajuste.antecedentes.texto,
+            whitelabelId
+          );
+          if (situacao !== 'JA_PREENCHIDA') feito.push('antecedentes pessoais');
+        }
+        resultados.push({ leadId: ajuste.leadId, patientId: ajuste.patientId, pacienteNome: ajuste.pacienteNome, ok: true, feito });
+      } catch (erro) {
+        console.error('Falha ao completar paciente', ajuste.patientId, erro);
+        resultados.push({
+          leadId: ajuste.leadId,
+          patientId: ajuste.patientId,
+          pacienteNome: ajuste.pacienteNome,
+          ok: false,
+          feito,
+          erro: 'Nao foi possivel gravar (verifique as permissoes).',
+        });
+      }
+    }
+    return resultados;
   },
 
   async deleteLead(id: string, whitelabelId?: string | null) {
