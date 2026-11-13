@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { toFirestoreData } from '../src/lib/firestoreData';
+import { formatAge, needsEvolution } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
 
@@ -108,5 +109,30 @@ assert.deepEqual(
 assert.equal(rows.find((row) => row.packageId === 'k1')?.therapistName, 'Dra. Raiza');
 assert.equal(rows.find((row) => row.packageId === 'k5')?.therapistName, 'Sem terapeuta');
 
+// Evolução pendente: sessão concluída sem evolução vinculada nem texto no agendamento.
+assert.equal(needsEvolution({ status: 'CONCLUÍDO' }), true);
+assert.equal(needsEvolution({ status: 'CONCLUÍDO', evolutionId: '' }), true);
+assert.equal(needsEvolution({ status: 'CONCLUÍDO', evolutionId: 'e1' }), false);
+assert.equal(needsEvolution({ status: 'CONCLUÍDO', clinicalEvolution: 'Boa sessão' }), false);
+assert.equal(needsEvolution({ status: 'CONCLUÍDO', clinicalEvolution: '   ' }), true);
+assert.equal(needsEvolution({ status: 'AGUARDANDO' }), false);
+assert.equal(needsEvolution({ status: 'CANCELADO' }), false);
+
+// Idade do bebê a partir de DD/MM/AAAA (ou AAAA-MM-DD), relativa a uma data fixa.
+const hoje = new Date(2026, 10, 13);
+assert.equal(formatAge('03/10/2024', hoje), '2 anos e 1 mês');
+assert.equal(formatAge('13/12/2024', hoje), '1 ano e 11 meses');
+assert.equal(formatAge('13/11/2025', hoje), '1 ano');
+assert.equal(formatAge('13/06/2026', hoje), '5 meses');
+assert.equal(formatAge('13/10/2026', hoje), '1 mês');
+assert.equal(formatAge('30/10/2026', hoje), '14 dias');
+assert.equal(formatAge('12/11/2026', hoje), '1 dia');
+assert.equal(formatAge('2026-06-13', hoje), '5 meses');
+assert.equal(formatAge('', hoje), '');
+assert.equal(formatAge('abc', hoje), '');
+assert.equal(formatAge('31/02/2025', hoje), '');
+assert.equal(formatAge('01/01/2030', hoje), '');
+
 console.log('OK: payloads do Firestore sanitizados sem campos undefined.');
 console.log('OK: progresso de pacote conta so sessoes concluidas.');
+console.log('OK: evolucao pendente e idade do bebe.');
