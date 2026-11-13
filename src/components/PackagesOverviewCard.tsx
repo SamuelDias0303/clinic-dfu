@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Package as PackageIcon } from 'lucide-react';
+import { Calendar, FileText, Package as PackageIcon } from 'lucide-react';
 import { Appointment, Package, Patient } from '../types';
 import { packageOverview } from '../lib/packageProgress';
 
@@ -9,9 +9,11 @@ interface PackagesOverviewCardProps {
   appointments: Appointment[];
   // Gestor e admin filtram por terapeuta; o terapeuta já vê só os próprios pacientes.
   canFilterByTherapist: boolean;
+  onOpenProntuario: (patientId: string) => void;
+  onOpenAgenda: (patientId: string) => void;
 }
 
-export default function PackagesOverviewCard({ packages, patients, appointments, canFilterByTherapist }: PackagesOverviewCardProps) {
+export default function PackagesOverviewCard({ packages, patients, appointments, canFilterByTherapist, onOpenProntuario, onOpenAgenda }: PackagesOverviewCardProps) {
   const [therapistFilter, setTherapistFilter] = useState('');
 
   const rows = useMemo(() => packageOverview(packages, patients, appointments), [packages, patients, appointments]);
@@ -48,13 +50,14 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
         <p className="p-6 text-sm text-slate-400 dark:text-slate-500">Nenhum pacote ativo.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] border-collapse text-left">
+          <table className="w-full min-w-[680px] border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/50">
                 <th className="px-6 py-3">Paciente</th>
                 {canFilterByTherapist && <th className="px-6 py-3">Terapeuta</th>}
                 <th className="px-6 py-3">Andamento</th>
                 <th className="px-6 py-3">Restantes</th>
+                <th className="px-6 py-3 text-right">Ver</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -80,6 +83,28 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
                     </td>
                     <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">
                       {row.complete ? 'Concluído' : row.remaining}
+                    </td>
+                    <td className="px-6 py-3">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => onOpenProntuario(row.patientId)}
+                          title="Abrir prontuário"
+                          aria-label={`Abrir prontuário de ${row.patientName}`}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800"
+                        >
+                          <FileText size={14} />
+                          Prontuário
+                        </button>
+                        <button
+                          onClick={() => onOpenAgenda(row.patientId)}
+                          title="Ver agendamentos do paciente"
+                          aria-label={`Ver agendamentos de ${row.patientName}`}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800"
+                        >
+                          <Calendar size={14} />
+                          Agenda
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

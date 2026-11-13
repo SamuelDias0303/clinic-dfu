@@ -29,6 +29,8 @@ function AppContent() {
   const { user, loading, logout, setActiveRole, setActiveWhitelabel, returnToGlobalAdmin } = useAuth();
   const [view, setView] = useState<View>('DASHBOARD');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [prontuarioBack, setProntuarioBack] = useState<View>('PACIENTES');
+  const [agendaPatient, setAgendaPatient] = useState<Patient | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [passwordRecoveryEmail, setPasswordRecoveryEmail] = useState('');
   const inviteToken = new URLSearchParams(window.location.search).get('invite');
@@ -102,9 +104,21 @@ function AppContent() {
     }
   };
 
-  const handleOpenProntuario = (patient: Patient) => {
+  const handleOpenProntuario = (patient: Patient, back: View = 'PACIENTES') => {
     setSelectedPatient(patient);
+    setProntuarioBack(back);
     setView('PRONTUARIO');
+  };
+
+  // Agenda filtrada por um paciente (vinda do Painel); o menu lateral volta à agenda completa.
+  const handleOpenAgenda = (patient: Patient) => {
+    setAgendaPatient(patient);
+    setView('AGENDA');
+  };
+
+  const handleNavigate = (next: View) => {
+    setAgendaPatient(null);
+    setView(next);
   };
 
   const handleOpenPasswordRecovery = (email: string) => {
@@ -212,9 +226,20 @@ function AppContent() {
     }
 
     switch (view) {
-      case 'DASHBOARD': return <DashboardView />;
+      case 'DASHBOARD': return (
+        <DashboardView
+          onOpenProntuario={(patient) => handleOpenProntuario(patient, 'DASHBOARD')}
+          onOpenAgenda={handleOpenAgenda}
+        />
+      );
       case 'PACIENTES': return <PatientListView onOpenProntuario={handleOpenProntuario} />;
-      case 'AGENDA': return <AgendaView />;
+      case 'AGENDA': return (
+        <AgendaView
+          patient={agendaPatient}
+          onClearPatient={() => setAgendaPatient(null)}
+          onBackToDashboard={agendaPatient ? () => handleNavigate('DASHBOARD') : undefined}
+        />
+      );
       case 'TERAPEUTAS': return <TherapistListView />;
       case 'BACKOFFICE': return <BackofficeView />;
       case 'AI_RESOURCES': return <AiResourcesView />;
@@ -227,7 +252,7 @@ function AppContent() {
         />
       );
       case 'PRONTUARIO': return selectedPatient ? (
-        <ClinicalRecordView patient={selectedPatient} onBack={() => setView('PACIENTES')} />
+        <ClinicalRecordView patient={selectedPatient} onBack={() => setView(prontuarioBack)} />
       ) : <PatientListView onOpenProntuario={handleOpenProntuario} />;
       default: return (
         <TenantAccessState
@@ -243,7 +268,7 @@ function AppContent() {
     <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950 transition-colors duration-300">
       <Sidebar 
         activeView={view} 
-        onNavigate={setView} 
+        onNavigate={handleNavigate}
         role={user.activeRole} 
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}

@@ -20,7 +20,12 @@ import { useAuth } from '../contexts/AuthContext';
 
 const DAILY_APPOINTMENT_CAPACITY = 14;
 
-export default function DashboardView() {
+interface DashboardViewProps {
+  onOpenProntuario: (patient: Patient) => void;
+  onOpenAgenda: (patient: Patient) => void;
+}
+
+export default function DashboardView({ onOpenProntuario, onOpenAgenda }: DashboardViewProps) {
   const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -136,6 +141,14 @@ export default function DashboardView() {
         patients={patients}
         appointments={appointments}
         canFilterByTherapist={user?.activeRole !== 'TERAPEUTA'}
+        onOpenProntuario={(patientId) => {
+          const patient = patients.find((item) => item.id === patientId);
+          if (patient) onOpenProntuario(patient);
+        }}
+        onOpenAgenda={(patientId) => {
+          const patient = patients.find((item) => item.id === patientId);
+          if (patient) onOpenAgenda(patient);
+        }}
       />
 
       <AppointmentFormModal

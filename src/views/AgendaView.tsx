@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Appointment } from '../types';
+import { Appointment, Patient } from '../types';
 import { appointmentService } from '../services/appointmentService';
 import { useAuth } from '../contexts/AuthContext';
 import AppointmentFormModal from '../components/AppointmentFormModal';
 import DeleteAppointmentModal from '../components/DeleteAppointmentModal';
+import PatientAppointmentsList from '../components/PatientAppointmentsList';
 
 const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
 const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -64,7 +65,14 @@ function AppointmentCard({ appointment, onEdit, onDelete, showTherapist }: Appoi
   );
 }
 
-export default function AgendaView() {
+interface AgendaViewProps {
+  // Quando vem do Painel, a Agenda lista os agendamentos desse paciente em vez da grade.
+  patient?: Patient | null;
+  onClearPatient?: () => void;
+  onBackToDashboard?: () => void;
+}
+
+export default function AgendaView({ patient, onClearPatient, onBackToDashboard }: AgendaViewProps = {}) {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -186,12 +194,54 @@ export default function AgendaView() {
     return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
   };
 
+  const appointmentModals = (
+    <>
+      <DeleteAppointmentModal
+        isOpen={confirmDelete.isOpen}
+        onClose={() => setConfirmDelete({ isOpen: false })}
+        onDeleteSingle={executeDeleteSingle}
+        onDeleteSeries={confirmDelete.appointment?.recurrenceId ? executeDeleteSeries : undefined}
+        isRecurring={!!confirmDelete.appointment?.recurrenceId && confirmDelete.appointment?.recurrence !== 'NONE'}
+      />
+
+      <AppointmentFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={editingAppointment ? handleUpdateAppointment : handleCreateAppointment}
+        onDelete={editingAppointment ? async () => handleDeleteAppointment(editingAppointment) : undefined}
+        initialData={editingAppointment}
+        selectedSlot={selectedSlot}
+        title={editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
+      />
+    </>
+  );
+
   if (loading) {
     return (
       <div className="flex h-[400px] flex-col items-center justify-center gap-4 rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <Loader2 className="animate-spin text-primary" size={32} />
         <p className="font-medium text-slate-500 dark:text-slate-400">Carregando sua agenda...</p>
       </div>
+    );
+  }
+
+  if (patient?.id) {
+    return (
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-w-0">
+        <PatientAppointmentsList
+          patientName={patient.name}
+          appointments={appointments.filter((appointment) => appointment.patientId === patient.id)}
+          showTherapist={user?.activeRole !== 'TERAPEUTA'}
+          onEdit={(appointment) => {
+            setEditingAppointment(appointment);
+            setSelectedSlot(null);
+            setIsModalOpen(true);
+          }}
+          onShowFullAgenda={() => onClearPatient?.()}
+          onBackToDashboard={onBackToDashboard}
+        />
+        {appointmentModals}
+      </motion.div>
     );
   }
 
@@ -351,23 +401,7 @@ export default function AgendaView() {
         </div>
       </div>
 
-      <DeleteAppointmentModal
-        isOpen={confirmDelete.isOpen}
-        onClose={() => setConfirmDelete({ isOpen: false })}
-        onDeleteSingle={executeDeleteSingle}
-        onDeleteSeries={confirmDelete.appointment?.recurrenceId ? executeDeleteSeries : undefined}
-        isRecurring={!!confirmDelete.appointment?.recurrenceId && confirmDelete.appointment?.recurrence !== 'NONE'}
-      />
-
-      <AppointmentFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={editingAppointment ? handleUpdateAppointment : handleCreateAppointment}
-        onDelete={editingAppointment ? async () => handleDeleteAppointment(editingAppointment) : undefined}
-        initialData={editingAppointment}
-        selectedSlot={selectedSlot}
-        title={editingAppointment ? 'Editar Agendamento' : 'Novo Agendamento'}
-      />
+      {appointmentModals}
     </motion.div>
   );
 }
