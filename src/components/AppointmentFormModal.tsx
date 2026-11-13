@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Calendar, ClipboardList, Clock, FileText, Loader2, Search, Trash2, User, Users, X } from 'lucide-react';
-import { Appointment, Patient } from '../types';
+import { Calendar, ClipboardList, Clock, FileText, Loader2, Package as PackageIcon, Search, Trash2, User, Users, X } from 'lucide-react';
+import { Appointment, Package as PackageRecord, Patient } from '../types';
+import { packageProgress } from '../lib/packageProgress';
+import { packageService } from '../services/packageService';
 import { patientService } from '../services/patientService';
 import { therapistService, Therapist } from '../services/therapistService';
 import { clinicalRecordService } from '../services/clinicalRecordService';
@@ -50,9 +52,12 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
     notes: '',
     clinicalEvolution: '',
     evolutionId: '',
+    packageId: '',
     recurrence: 'NONE',
     recurrenceDays: [],
   });
+  const [patientPackages, setPatientPackages] = useState<PackageRecord[]>([]);
+  const [packageAppointments, setPackageAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -95,16 +100,51 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
       notes: '',
       clinicalEvolution: '',
       evolutionId: '',
+      packageId: '',
       recurrence: 'NONE',
       recurrenceDays: [],
     });
     setSearchTerm('');
   }, [initialData, selectedSlot, isOpen, user]);
 
+  // Terapeuta só lê os próprios agendamentos; a contagem dele reflete isso.
+  const packageTherapistId = user?.activeRole === 'TERAPEUTA' ? user.email : undefined;
+
+  useEffect(() => {
+    if (!isOpen || !formData.patientId) {
+      setPatientPackages([]);
+      setPackageAppointments([]);
+      return;
+    }
+
+    const unsubPackages = packageService.subscribeToPatientPackages(formData.patientId, setPatientPackages, user?.activeWhitelabelId);
+    const unsubAppointments = packageService.subscribeToPatientAppointments(formData.patientId, setPackageAppointments, packageTherapistId, user?.activeWhitelabelId);
+    return () => {
+      unsubPackages();
+      unsubAppointments();
+    };
+  }, [isOpen, formData.patientId, user?.activeWhitelabelId, packageTherapistId]);
+
+  const packageOptions = patientPackages
+    .map(pkg => ({ pkg, progress: packageProgress(pkg, packageAppointments.filter(item => item.packageId === pkg.id)) }))
+    .filter(({ pkg, progress }) => progress.open || pkg.id === formData.packageId);
+  const selectedPackage = packageOptions.find(({ pkg }) => pkg.id === formData.packageId);
+  // shortcut: estimativa espelha os limites de buildRecurringAppointments (12 ocorrências, 6 se mensal, vezes os dias); revisar se aqueles limites mudarem.
+  const recurrenceCount = formData.recurrence === 'NONE'
+    ? 1
+    : (formData.recurrence === 'MONTHLY' ? 6 : 12) * Math.max(1, formData.recurrenceDays?.length ?? 0);
+  const packageWarning = !selectedPackage
+    ? ''
+    : selectedPackage.progress.complete
+      ? 'Este pacote já está completo; o agendamento passa do total de sessões.'
+      : recurrenceCount > selectedPackage.progress.remaining
+        ? `A recorrência pode criar até ${recurrenceCount} agendamentos e o pacote tem ${selectedPackage.progress.remaining} sessões restantes.`
+        : '';
+
   const handlePatientChange = (patientId: string) => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return;
-    setFormData({ ...formData, patientId, patientName: patient.name });
+    setFormData({ ...formData, patientId, patientName: patient.name, packageId: '' });
     setSearchTerm(patient.name);
     setIsPatientListOpen(false);
   };
@@ -244,7 +284,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({ ...formData, patientId: '', patientName: '' });
+                      setFormData({ ...formData, patientId: '', patientName: '', packageId: '' });
                       setSearchTerm('');
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -284,6 +324,27 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
               </AnimatePresence>
               <input type="hidden" value={formData.patientId} required />
             </div>
+
+            {formData.patientId && (
+              <div>
+                <label className={labelClass}><PackageIcon size={14} /> Pacote (opcional)</label>
+                <select
+                  value={formData.packageId || ''}
+                  onChange={event => setFormData({ ...formData, packageId: event.target.value })}
+                  className={inputClass}
+                >
+                  <option value="">Sem pacote</option>
+                  {packageOptions.map(({ pkg, progress }) => (
+                    <option key={pkg.id} value={pkg.id}>
+                      {progress.used} de {progress.total} sessões{pkg.status === 'ENCERRADO' ? ' (encerrado)' : progress.complete ? ' (completo)' : ''}
+                    </option>
+                  ))}
+                </select>
+                {packageWarning && (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{packageWarning}</p>
+                )}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
