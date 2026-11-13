@@ -58,16 +58,16 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 transition-all duration-300">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
         <h3 className="flex items-center gap-2 text-lg font-bold text-slate-800 dark:text-slate-100">
-          <PackageIcon size={20} className="text-[#1e5d8c] dark:text-blue-400" />
+          <PackageIcon size={20} className="text-primary" />
           Pacotes de atendimento
         </h3>
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1e5d8c] text-white rounded-xl text-sm font-bold hover:bg-[#1e5d8c]/90 transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all active:scale-95"
           >
             <Plus size={16} />
             NOVO PACOTE
@@ -94,7 +94,7 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
           <button
             onClick={handleCreate}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-[#1e5d8c] text-white rounded-xl text-sm font-bold hover:bg-[#1e5d8c]/90 transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
           >
             {saving && <Loader2 className="animate-spin" size={16} />}
             CRIAR
@@ -145,7 +145,7 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
                   aria-valuenow={Math.min(progress.used, progress.total)}
                   className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden"
                 >
-                  <div className="h-full bg-[#1e5d8c] dark:bg-blue-600" style={{ width: `${percent}%` }} />
+                  <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
                 </div>
                 {progress.ending && (
                   <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">

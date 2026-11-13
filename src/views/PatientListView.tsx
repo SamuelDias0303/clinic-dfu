@@ -151,9 +151,9 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-900/50">
                 <th className="px-6 py-3">Paciente</th>
-                <th className="px-6 py-3">Mãe</th>
+                <th className="hidden px-6 py-3 xl:table-cell">Mãe</th>
                 <th className="px-6 py-3">Contato</th>
-                <th className="px-6 py-3">Convênio</th>
+                <th className="hidden px-6 py-3 xl:table-cell">Convênio</th>
                 {user?.activeRole === 'GESTOR' && <th className="px-6 py-3">Terapeuta</th>}
                 <th className="px-6 py-3">Status</th>
                 <th className="px-6 py-3 text-right">Ações</th>
@@ -182,18 +182,18 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                         </div>
                         <div>
                           <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400">CPF: {patient.cpf}</div>
+                          {patient.cpf && <div className="text-xs text-slate-500 dark:text-slate-400">CPF: {patient.cpf}</div>}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-700 dark:text-slate-300 font-medium">
+                    <td className="hidden px-6 py-4 text-sm text-slate-700 dark:text-slate-300 font-medium xl:table-cell">
                       {patient.motherName?.trim() || '—'}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-slate-700 dark:text-slate-300 font-medium">{patient.phone}</div>
                       <div className="text-xs text-slate-400 dark:text-slate-500">{patient.email}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-medium">{patient.healthPlan}</td>
+                    <td className="hidden px-6 py-4 text-sm text-slate-600 dark:text-slate-400 font-medium xl:table-cell">{patient.healthPlan}</td>
                     {user?.activeRole === 'GESTOR' && (
                       <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium">
                         {patient.therapistName || 'Não vinculado'}
@@ -207,30 +207,33 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100 transition-opacity">
-                        <button 
+                      <div className="flex items-center justify-end gap-1">
+                        <button
                           onClick={() => onOpenProntuario(patient)}
-                          className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
+                          className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
                           title="Prontuário"
+                          aria-label={`Abrir prontuário de ${patient.name}`}
                         >
-                          <FileText size={16} />
+                          <FileText size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => {
                             setEditingPatient(patient);
                             setIsModalOpen(true);
                           }}
-                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                          className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
                           title="Editar"
+                          aria-label={`Editar ${patient.name}`}
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={18} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleDeletePatient(patient.id!)}
-                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"
+                          className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:bg-rose-900/20 rounded-lg transition-all"
                           title="Excluir"
+                          aria-label={`Excluir ${patient.name}`}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         </button>
                       </div>
                     </td>
@@ -257,7 +260,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">CPF: {patient.cpf}</div>
+                      {patient.cpf && <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">CPF: {patient.cpf}</div>}
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${

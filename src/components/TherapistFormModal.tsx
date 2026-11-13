@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Briefcase, Loader2, MapPin, Star, User, X } from 'lucide-react';
+import { Briefcase, Loader2, MapPin, User, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Therapist } from '../services/therapistService';
 
@@ -109,31 +109,16 @@ export default function TherapistFormModal({ isOpen, onClose, onSubmit, initialD
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Status</label>
-                <select
-                  value={formData.status}
-                  onChange={event => setFormData({ ...formData, status: event.target.value as 'Ativo' | 'Inativo' })}
-                  className={inputClass}
-                >
-                  <option value="Ativo">Ativo</option>
-                  <option value="Inativo">Inativo</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}><Star size={14} /> Avaliação (1-5)</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="5"
-                  step="0.1"
-                  required
-                  value={formData.rating}
-                  onChange={event => setFormData({ ...formData, rating: parseFloat(event.target.value) })}
-                  className={inputClass}
-                />
-              </div>
+            <div>
+              <label className={labelClass}>Status</label>
+              <select
+                value={formData.status}
+                onChange={event => setFormData({ ...formData, status: event.target.value as 'Ativo' | 'Inativo' })}
+                className={inputClass}
+              >
+                <option value="Ativo">Ativo</option>
+                <option value="Inativo">Inativo</option>
+              </select>
             </div>
 
             <div>

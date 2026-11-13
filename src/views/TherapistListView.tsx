@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Loader2, Edit2, Trash2 } from 'lucide-react';
+import { Loader2, Edit2, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { therapistService, Therapist } from '../services/therapistService';
 import TherapistFormModal from '../components/TherapistFormModal';
@@ -98,12 +98,6 @@ export default function TherapistListView() {
                 <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
                   <span>Unidades:</span>
                   <span className="font-bold text-slate-700 dark:text-slate-300">{t.units ? t.units.join(', ') : 'N/A'}</span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                  <span>Avaliação:</span>
-                  <div className="flex items-center gap-1 text-amber-500 font-bold">
-                    <Star size={12} fill="currentColor" /> {t.rating || 'N/A'}
-                  </div>
                 </div>
               </div>
 

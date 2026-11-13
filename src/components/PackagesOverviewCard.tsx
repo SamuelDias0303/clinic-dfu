@@ -56,7 +56,7 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
         <p className="p-6 text-sm text-slate-400 dark:text-slate-500">Nenhum pacote ativo.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] border-collapse text-left">
+          <table className="w-full min-w-[520px] border-collapse text-left">
             <thead>
               <tr className="bg-slate-50/50 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:bg-slate-800/50">
                 <th className="px-6 py-3">Paciente</th>
@@ -82,7 +82,7 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
                         aria-valuemin={0}
                         aria-valuemax={row.total}
                         aria-valuenow={Math.min(row.used, row.total)}
-                        className="h-1.5 w-40 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                        className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 xl:w-40"
                       >
                         <div className="h-full bg-primary" style={{ width: `${percent}%` }} />
                       </div>
@@ -102,8 +102,8 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
                           aria-label={`Abrir prontuário de ${row.patientName}`}
                           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800"
                         >
-                          <FileText size={14} />
-                          Prontuário
+                          <FileText size={16} />
+                          <span className="hidden xl:inline">Prontuário</span>
                         </button>
                         <button
                           onClick={() => onOpenAgenda(row.patientId)}
@@ -111,8 +111,8 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
                           aria-label={`Ver agendamentos de ${row.patientName}`}
                           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary dark:text-slate-400 dark:hover:bg-slate-800"
                         >
-                          <Calendar size={14} />
-                          Agenda
+                          <Calendar size={16} />
+                          <span className="hidden xl:inline">Agenda</span>
                         </button>
                       </div>
                     </td>

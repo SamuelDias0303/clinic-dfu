@@ -221,14 +221,14 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
       </div>
 
       {/* Patient Info Card */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
         <div className="p-6">
           <div className="flex items-start gap-6">
             <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-300 dark:text-slate-600">
               <User size={40} />
             </div>
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-[#1e5d8c] dark:text-blue-400 uppercase">{patient.name}</h3>
+              <h3 className="text-2xl font-bold text-primary uppercase">{patient.name}</h3>
               {patient.cpf && <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">CPF: {patient.cpf}</p>}
 
               {/* Campo vazio não aparece: rótulo sem valor só polui o cadastro incompleto. */}
@@ -300,7 +300,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
       {patient.id && <PatientPackagesCard patientId={patient.id} />}
 
       {/* Evoluções Section */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 transition-all duration-300">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 transition-all duration-300">
         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-6">Evoluções</h3>
         
         <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-8">
@@ -310,7 +310,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
               onClick={() => setActiveTab(tab.id as Tab)}
               className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all ${
                 activeTab === tab.id 
-                  ? 'bg-[#1e5d8c] border-[#1e5d8c] text-white shadow-md' 
+                  ? 'bg-primary border-primary text-white shadow-md' 
                   : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
               }`}
             >
@@ -340,33 +340,37 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                     <div className="text-center py-12 text-slate-400 dark:text-slate-500">Nenhuma evolução registrada.</div>
                   ) : (
                     evolutions.map((evo) => (
-                      <div key={evo.id} className="p-6 border border-slate-100 dark:border-slate-800 rounded-2xl hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
+                      <div key={evo.id} className="p-6 border border-slate-100 dark:border-slate-800 rounded-xl hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                         <div className="flex items-start justify-between gap-3 mb-3">
                           <div className="flex items-center gap-2">
-                            <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.date}</span>
-                            <span className="px-3 py-1 bg-[#1e5d8c] dark:bg-blue-600 text-white text-[10px] font-bold rounded-full">{evo.time}</span>
+                            <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-full">{evo.date}</span>
+                            <span className="px-3 py-1 bg-primary text-white text-[10px] font-bold rounded-full">{evo.time}</span>
                           </div>
                           {canManageEvolution && evo.id && editingId !== evo.id && (
                             <div className="flex items-center gap-1 shrink-0">
                               <button
                                 onClick={() => handleStartEdit(evo)}
-                                className="p-2 rounded-lg text-slate-400 hover:text-[#1e5d8c] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-600 hover:text-primary hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
                                 title="Editar evolução"
+                                aria-label="Editar evolução"
                               >
-                                <Pencil size={16} />
+                                <Pencil size={18} />
+                                <span className="hidden sm:inline">Editar</span>
                               </button>
                               <button
                                 onClick={() => handleDeleteEvolution(evo.id!)}
                                 disabled={saving}
-                                className="p-2 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50"
+                                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-300 dark:hover:bg-rose-950/40 transition-colors disabled:opacity-50"
                                 title="Excluir evolução"
+                                aria-label="Excluir evolução"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={18} />
+                                <span className="hidden sm:inline">Excluir</span>
                               </button>
                             </div>
                           )}
                         </div>
-                        <h4 className="text-[#1e5d8c] dark:text-blue-400 font-bold uppercase mb-2">
+                        <h4 className="text-primary font-bold uppercase mb-2">
                           {evo.type} com Dr(a). {evo.therapistName}
                         </h4>
                         {editingId === evo.id ? (
@@ -380,7 +384,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                               <button
                                 onClick={() => handleUpdateEvolution(evo.id!)}
                                 disabled={saving}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-[#1e5d8c] text-white rounded-xl font-bold text-sm hover:bg-[#1e5d8c]/90 transition-all active:scale-95 disabled:opacity-50"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
                               >
                                 {saving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                                 SALVAR
@@ -475,7 +479,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                     <button 
                       onClick={handleSaveAnamnese}
                       disabled={saving}
-                      className="flex items-center gap-2 px-8 py-3 bg-[#1e5d8c] text-white rounded-xl font-bold hover:bg-[#1e5d8c]/90 transition-all active:scale-95 disabled:opacity-50"
+                      className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                       SALVAR ANAMNESE
@@ -500,7 +504,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                   <textarea
                     value={currentEvolution}
                     onChange={e => setCurrentEvolution(e.target.value)}
-                    className="w-full p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm min-h-[250px] shadow-inner dark:text-white"
+                    className="w-full p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm min-h-[250px] shadow-inner dark:text-white"
                     placeholder="Descreva a evolução do paciente nesta sessão..."
                   />
 
@@ -508,7 +512,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                     <button 
                       onClick={() => handleSaveEvolution('DRAFT')}
                       disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#45b39d] text-white rounded-xl font-bold hover:bg-[#45b39d]/90 transition-all active:scale-95 disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-600/90 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
                       SALVAR
@@ -516,7 +520,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                     <button 
                       onClick={() => handleSaveEvolution('FINALIZED')}
                       disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#1e5d8c] text-white rounded-xl font-bold hover:bg-[#1e5d8c]/90 transition-all active:scale-95 disabled:opacity-50"
+                      className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
                     >
                       {saving ? <Loader2 className="animate-spin" size={20} /> : <CheckCircle size={20} />}
                       FINALIZAR
