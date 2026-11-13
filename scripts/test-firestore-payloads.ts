@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { toFirestoreData } from '../src/lib/firestoreData';
-import { formatAge, needsEvolution } from '../src/lib/clinicalHelpers';
+import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
 
@@ -146,4 +146,26 @@ assert.equal(formatAge('01/01/2030', hoje), '');
 
 console.log('OK: payloads do Firestore sanitizados sem campos undefined.');
 console.log('OK: progresso de pacote conta so sessoes concluidas.');
+// Datas por extenso: só a primeira letra maiúscula ("Novembro de 2026", não "Novembro De 2026").
+assert.equal(upperFirst('sexta-feira, 13 de novembro'), 'Sexta-feira, 13 de novembro');
+assert.equal(upperFirst('novembro de 2026'), 'Novembro de 2026');
+assert.equal(upperFirst(''), '');
+
+// Paciente sem terapeuta: vazio, ausente ou o valor padrão 'platform' (gestor sem escolher).
+assert.equal(isUnassigned({}), true);
+assert.equal(isUnassigned({ therapistId: '' }), true);
+assert.equal(isUnassigned({ therapistId: 'platform' }), true);
+assert.equal(isUnassigned({ therapistId: 'raiza@clinica.com' }), false);
+
+// Evolução já existente que pode ser vinculada a uma sessão: sem vínculo e não usada por
+// outro agendamento, da mais próxima da data da sessão para a mais distante.
+const candidates = evolutionCandidates([
+  { id: 'e1', date: '11/03/2026' },
+  { id: 'e2', date: '10/03/2026' },
+  { id: 'e3', date: '01/03/2026', appointmentId: 'outra' },
+  { id: 'e4', date: '20/03/2026' },
+  { id: 'e5', date: '05/03/2026' },
+], '2026-03-10', new Set(['e4']));
+assert.deepEqual(candidates.map((item) => item.id), ['e2', 'e1', 'e5']);
+
 console.log('OK: evolucao pendente e idade do bebe.');

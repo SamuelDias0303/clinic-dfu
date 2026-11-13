@@ -1,4 +1,31 @@
-import type { Appointment } from '../types';
+import type { Appointment, Evolution, Patient } from '../types';
+
+// Datas por extenso saem em minúsculas do navegador; só a primeira letra sobe.
+export const upperFirst = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+// Paciente que nenhum terapeuta enxerga: sem vínculo ou com o padrão 'platform' (gestor sem escolher).
+export function isUnassigned(patient: Pick<Patient, 'therapistId'>) {
+  return !patient.therapistId || patient.therapistId === 'platform';
+}
+
+// Evolução já escrita que pode ser ligada a uma sessão: sem vínculo e não usada por outro
+// agendamento, da data mais próxima da sessão (AAAA-MM-DD) para a mais distante.
+export function evolutionCandidates<T extends Pick<Evolution, 'id' | 'date' | 'appointmentId'>>(
+  evolutions: T[],
+  appointmentDate: string,
+  usedIds: Set<string>,
+): T[] {
+  const [year, month, day] = appointmentDate.split('-').map(Number);
+  const target = Date.UTC(year, month - 1, day);
+  const dayOf = (value: string) => {
+    const [d, m, y] = value.split('/').map(Number);
+    return Date.UTC(y, m - 1, d);
+  };
+
+  return evolutions
+    .filter((evolution) => evolution.id && !evolution.appointmentId && !usedIds.has(evolution.id))
+    .sort((a, b) => Math.abs(dayOf(a.date) - target) - Math.abs(dayOf(b.date) - target) || dayOf(b.date) - dayOf(a.date));
+}
 
 // Sessão concluída que ainda não tem evolução: nem vinculada (evolutionId), nem
 // escrita direto no agendamento (clinicalEvolution).
