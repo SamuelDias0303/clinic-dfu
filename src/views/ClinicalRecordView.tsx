@@ -21,6 +21,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Patient, Evolution, Anamnese } from '../types';
 import { clinicalRecordService } from '../services/clinicalRecordService';
+import PatientPackagesCard from '../components/PatientPackagesCard';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ClinicalRecordViewProps {
@@ -261,6 +262,8 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
           </div>
         </div>
       </div>
+
+      {patient.id && <PatientPackagesCard patientId={patient.id} />}
 
       {/* Evoluções Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 transition-all duration-300">
