@@ -7,6 +7,8 @@ import { therapistService, Therapist } from '../services/therapistService';
 import { useAuth } from '../contexts/AuthContext';
 import PatientFormModal from '../components/PatientFormModal';
 import ConfirmModal from '../components/ConfirmModal';
+import AssignTherapistModal from '../components/AssignTherapistModal';
+import { isUnassigned } from '../lib/clinicalHelpers';
 
 export default function PatientListView({ onOpenProntuario }: { onOpenProntuario: (patient: Patient) => void }) {
   const { user } = useAuth();
@@ -19,6 +21,9 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   const [patientToDelete, setPatientToDelete] = useState<string | null>(null);
   const [editingPatient, setEditingPatient] = useState<Patient | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const canAssignTherapist = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
+  const unassignedCount = patients.filter(isUnassigned).length;
 
   useEffect(() => {
     const filterId = user?.activeRole === 'TERAPEUTA' ? user.email : undefined;
@@ -81,16 +86,28 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
           <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Pacientes</h2>
           <p className="text-slate-500 dark:text-slate-400 text-xs lg:text-sm mt-1 font-medium">Gerencie o cadastro e prontuário dos seus pacientes.</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingPatient(undefined);
-            setIsModalOpen(true);
-          }}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
-        >
-          <UserPlus size={18} />
-          Novo Paciente
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canAssignTherapist && unassignedCount > 0 && (
+            <button
+              onClick={() => setIsAssignOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 text-sm font-bold hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-300 transition-all active:scale-95"
+              title="Pacientes sem terapeuta não aparecem para nenhum terapeuta"
+            >
+              <Users size={18} />
+              Atribuir terapeuta ({unassignedCount})
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setEditingPatient(undefined);
+              setIsModalOpen(true);
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
+          >
+            <UserPlus size={18} />
+            Novo Paciente
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden transition-all duration-300">
@@ -311,7 +328,15 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
         title={editingPatient ? 'Editar Paciente' : 'Cadastrar Novo Paciente'}
       />
 
-      <ConfirmModal 
+      <AssignTherapistModal
+        isOpen={isAssignOpen}
+        onClose={() => setIsAssignOpen(false)}
+        patients={patients}
+        therapists={therapists}
+        whitelabelId={user?.activeWhitelabelId}
+      />
+
+      <ConfirmModal
         isOpen={isConfirmOpen}
         onClose={() => {
           setIsConfirmOpen(false);
