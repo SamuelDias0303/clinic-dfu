@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Appointment, Patient } from '../types';
@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AppointmentFormModal from '../components/AppointmentFormModal';
 import DeleteAppointmentModal from '../components/DeleteAppointmentModal';
 import PatientAppointmentsList from '../components/PatientAppointmentsList';
+import DayAppointmentsList from '../components/DayAppointmentsList';
 import { upperFirst } from '../lib/clinicalHelpers';
 
 const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
@@ -31,7 +32,7 @@ function AppointmentCard({ appointment, onEdit, onDelete, showTherapist }: Appoi
 
   return (
     <div
-      className={`z-10 flex w-full cursor-pointer flex-col justify-between rounded-lg border p-1.5 text-[9px] shadow-sm transition-all hover:scale-[1.02] active:scale-95 lg:p-2 lg:text-[10px] ${statusClass}`}
+      className={`z-10 flex w-full cursor-pointer flex-col justify-between rounded-lg border p-1.5 text-[11px] shadow-sm transition-all hover:scale-[1.02] active:scale-95 lg:p-2 lg:text-xs ${statusClass}`}
       onClick={(event) => {
         event.stopPropagation();
         onEdit();
@@ -39,14 +40,14 @@ function AppointmentCard({ appointment, onEdit, onDelete, showTherapist }: Appoi
     >
       <div className="min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-1">
-          <div className="truncate font-bold leading-tight">{appointment.patientName}</div>
+          <div className="line-clamp-2 font-bold leading-tight">{appointment.patientName}</div>
           {appointment.recurrence && appointment.recurrence !== 'NONE' && (
             <div className="size-1.5 shrink-0 rounded-full bg-current opacity-50" title="Recorrente" />
           )}
         </div>
         <div className="mt-0.5 truncate font-medium opacity-80">{appointment.type}</div>
         {showTherapist && (
-          <div className="mt-0.5 truncate text-[8px] italic opacity-70">T: {appointment.therapistName}</div>
+          <div className="mt-0.5 truncate text-[10px] italic opacity-70">T: {appointment.therapistName}</div>
         )}
       </div>
       <div className="mt-1 flex items-center justify-between">
@@ -99,6 +100,14 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
 
     return () => unsubscribe();
   }, [user]);
+
+  // A grade começa às 07:00; abre já na hora atual para não rolar até achar o agora.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = scrollRef.current;
+    const row = container?.querySelector<HTMLElement>(`[data-hour="${String(new Date().getHours()).padStart(2, '0')}"]`);
+    if (container && row) container.scrollTop = Math.max(row.offsetTop - 8, 0);
+  }, [loading, viewMode, patient?.id]);
 
   const getStartOfWeek = (date: Date) => {
     const next = new Date(date);
@@ -246,9 +255,8 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
     );
   }
 
-  const calendarGridClass = viewMode === 'WEEK'
-    ? 'grid-cols-[72px_repeat(7,minmax(92px,1fr))]'
-    : 'grid-cols-[60px_minmax(0,1fr)]';
+  const calendarGridClass = 'grid-cols-[72px_repeat(7,minmax(92px,1fr))]';
+  const currentHour = String(new Date().getHours()).padStart(2, '0');
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-w-0 space-y-4 lg:space-y-6">
@@ -305,6 +313,20 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
         </div>
       </div>
 
+      {viewMode === 'DAY' ? (
+        <DayAppointmentsList
+          date={currentDate}
+          appointments={appointments.filter(appointment => appointment.date === formatDateLocal(currentDate))}
+          showTherapist={user?.activeRole === 'GESTOR'}
+          onEdit={(appointment) => {
+            setEditingAppointment(appointment);
+            setSelectedSlot(null);
+            setIsModalOpen(true);
+          }}
+          onNew={() => openNewAppointment(currentDate, '09:00')}
+        />
+      ) : (
+      <>
       <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:hidden">
         <span className="text-sm font-bold text-slate-900 dark:text-white">
           {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -314,66 +336,34 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
 
       <div className="w-full max-w-full min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="w-full max-w-full min-w-0 overflow-x-auto overscroll-x-contain">
-          <div className={viewMode === 'WEEK' ? 'w-[720px] lg:w-full' : 'w-full min-w-0'}>
+          <div className="w-[720px] lg:w-full">
             <div className={`grid ${calendarGridClass} border-b border-slate-100 bg-slate-50/50 dark:border-slate-800 dark:bg-slate-800/50`}>
               <div className="flex items-center justify-center border-r border-slate-100 p-3 dark:border-slate-800 lg:p-4">
                 <Clock size={16} className="text-slate-400" />
               </div>
-              {viewMode === 'WEEK' ? (
-                weekDays.map((date, index) => (
-                  <div key={date.toISOString()} className={`border-r border-slate-100 p-2 text-center dark:border-slate-800 lg:p-4 ${date.toDateString() === new Date().toDateString() ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
-                    <div className="truncate text-[8px] font-bold uppercase tracking-wider text-slate-400 lg:text-[10px]">{dayNames[index].substring(0, 3)}</div>
-                    <div className={`text-xs font-bold lg:text-sm ${date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>{date.getDate()}</div>
-                  </div>
-                ))
-              ) : (
-                <div className="border-r border-slate-100 bg-primary/5 p-3 pl-4 text-left dark:border-slate-800 dark:bg-primary/10 lg:p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    {currentDate.toDateString() === new Date().toDateString() ? 'Hoje' : dayNames[currentDate.getDay()]}
-                  </div>
-                  <div className="text-sm font-bold text-primary">{currentDate.getDate()} de {formatMonthYear(currentDate)}</div>
+              {weekDays.map((date, index) => (
+                <div key={date.toISOString()} className={`border-r border-slate-100 p-2 text-center dark:border-slate-800 lg:p-4 ${date.toDateString() === new Date().toDateString() ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
+                  <div className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-400">{dayNames[index].substring(0, 3)}</div>
+                  <div className={`text-xs font-bold lg:text-sm ${date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-slate-900 dark:text-white'}`}>{date.getDate()}</div>
                 </div>
-              )}
+              ))}
             </div>
 
-            <div className="max-h-[calc(100vh-320px)] overflow-y-auto lg:max-h-[600px]">
+            <div ref={scrollRef} className="relative max-h-[calc(100vh-320px)] overflow-y-auto lg:max-h-[600px]">
               {hours.map(hour => (
-                <div key={hour} className={`group grid ${calendarGridClass} border-b border-slate-50 dark:border-slate-800`}>
-                  <div className="border-r border-slate-100 bg-slate-50/30 p-3 text-center text-[10px] font-bold text-slate-400 dark:border-slate-800 dark:bg-slate-800/30 lg:p-4 lg:text-xs">
+                <div key={hour} data-hour={hour.slice(0, 2)} className={`group grid ${calendarGridClass} border-b border-slate-50 dark:border-slate-800`}>
+                  <div className={`border-r border-slate-100 p-3 text-center text-[10px] font-bold dark:border-slate-800 lg:p-4 lg:text-xs ${
+                    hour.slice(0, 2) === currentHour
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-slate-50/30 text-slate-400 dark:bg-slate-800/30'
+                  }`}>
                     {hour}
                   </div>
-                  {viewMode === 'WEEK' ? (
-                    weekDays.map(date => {
-                      const slotAppointments = getAppointmentsForSlot(date, hour);
-                      return (
-                        <div key={`${date.toISOString()}-${hour}`} className="group/slot relative flex min-h-[72px] flex-col gap-1 border-r border-slate-50 p-0.5 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50 lg:min-h-[80px] lg:p-1">
-                          {slotAppointments.length > 0 ? (
-                            slotAppointments.map(appointment => (
-                              <AppointmentCard
-                                key={appointment.id}
-                                appointment={appointment}
-                                showTherapist={user?.activeRole === 'GESTOR'}
-                                onEdit={() => {
-                                  setEditingAppointment(appointment);
-                                  setSelectedSlot(null);
-                                  setIsModalOpen(true);
-                                }}
-                                onDelete={() => handleDeleteAppointment(appointment)}
-                              />
-                            ))
-                          ) : (
-                            <button onClick={() => openNewAppointment(date, hour)} className="absolute inset-0 flex h-full w-full items-center justify-center text-primary/20 opacity-0 focus:text-primary/70 focus:opacity-100 group-hover/slot:opacity-100">
-                              <Plus size={16} />
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="group/slot relative flex min-h-[90px] flex-col gap-1 border-r border-slate-50 p-1 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50 lg:min-h-[100px]">
-                      {(() => {
-                        const slotAppointments = getAppointmentsForSlot(currentDate, hour);
-                        return slotAppointments.length > 0 ? (
+                  {weekDays.map(date => {
+                    const slotAppointments = getAppointmentsForSlot(date, hour);
+                    return (
+                      <div key={`${date.toISOString()}-${hour}`} className="group/slot relative flex min-h-[72px] flex-col gap-1 border-r border-slate-50 p-0.5 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50 lg:min-h-[80px] lg:p-1">
+                        {slotAppointments.length > 0 ? (
                           slotAppointments.map(appointment => (
                             <AppointmentCard
                               key={appointment.id}
@@ -388,19 +378,21 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
                             />
                           ))
                         ) : (
-                          <button onClick={() => openNewAppointment(currentDate, hour)} className="absolute inset-0 flex h-full w-full items-center justify-center text-primary/20 opacity-0 focus:text-primary/70 focus:opacity-100 group-hover/slot:opacity-100">
-                            <Plus size={20} />
+                          <button onClick={() => openNewAppointment(date, hour)} className="absolute inset-0 flex h-full w-full items-center justify-center text-primary/20 opacity-0 focus:text-primary/70 focus:opacity-100 group-hover/slot:opacity-100">
+                            <Plus size={16} />
                           </button>
-                        );
-                      })()}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {appointmentModals}
     </motion.div>
