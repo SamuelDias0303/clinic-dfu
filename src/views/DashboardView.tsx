@@ -99,7 +99,8 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
   };
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    // flex + order: no celular "Meu dia" vem antes das estatísticas; no desktop a ordem não muda.
+    <div className="flex flex-col gap-6 lg:gap-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -107,7 +108,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
       >
         <div className="min-w-0">
           <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Painel</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-xs lg:text-sm mt-1 font-medium capitalize">Visão geral para {formatDate(today)}</p>
+          <p className="text-slate-500 dark:text-slate-400 text-xs lg:text-sm mt-1 font-medium">Visão geral para {formatDate(today)}</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -120,7 +121,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
+      <div className="order-2 lg:order-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-6">
         <StatCard
           label="Total de Pacientes"
           value={loading ? '...' : patients.length.toString()}
@@ -148,7 +149,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+      <div className="order-1 lg:order-2 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 min-w-0">
           <MyDayCard
             todayAppointments={todayAppointments}
@@ -178,6 +179,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
         </div>
       </div>
 
+      <div className="order-3">
       <PackagesOverviewCard
         packages={packages}
         patients={patients}
@@ -192,6 +194,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
           if (patient) onOpenAgenda(patient);
         }}
       />
+      </div>
 
       <AppointmentFormModal
         isOpen={isModalOpen}

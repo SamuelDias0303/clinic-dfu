@@ -229,32 +229,43 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
             </div>
             <div className="flex-1">
               <h3 className="text-2xl font-bold text-[#1e5d8c] dark:text-blue-400 uppercase">{patient.name}</h3>
-              <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">CPF: {patient.cpf}</p>
-              
+              {patient.cpf && <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">CPF: {patient.cpf}</p>}
+
+              {/* Campo vazio não aparece: rótulo sem valor só polui o cadastro incompleto. */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 mt-6">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Data de Nascimento:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    {patient.birthDate}
-                    {age && <span className="ml-2 font-medium text-slate-500 dark:text-slate-400">({age})</span>}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Telefone:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.phone}</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Email:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.email}</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Convênio:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">{patient.healthPlan}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Endereço:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.address}</p>
-                </div>
+                {patient.birthDate && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Data de Nascimento:</label>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {patient.birthDate}
+                      {age && <span className="ml-2 font-medium text-slate-500 dark:text-slate-400">({age})</span>}
+                    </p>
+                  </div>
+                )}
+                {patient.phone && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Telefone:</label>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.phone}</p>
+                  </div>
+                )}
+                {patient.email && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Email:</label>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.email}</p>
+                  </div>
+                )}
+                {patient.healthPlan && (
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Convênio:</label>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase">{patient.healthPlan}</p>
+                  </div>
+                )}
+                {patient.address && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Endereço:</label>
+                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.address}</p>
+                  </div>
+                )}
                 {patient.fatherName && (
                   <div>
                     <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Pai:</label>

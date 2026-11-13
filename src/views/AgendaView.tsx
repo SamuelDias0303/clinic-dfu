@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AppointmentFormModal from '../components/AppointmentFormModal';
 import DeleteAppointmentModal from '../components/DeleteAppointmentModal';
 import PatientAppointmentsList from '../components/PatientAppointmentsList';
+import { upperFirst } from '../lib/clinicalHelpers';
 
 const hours = Array.from({ length: 14 }, (_, index) => `${String(index + 7).padStart(2, '0')}:00`);
 const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -287,7 +288,7 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
           </div>
 
           <div className="hidden min-w-[140px] items-center justify-center md:flex">
-            <span className="text-sm font-bold capitalize text-slate-700 dark:text-slate-300">{formatMonthYear(currentDate)}</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{upperFirst(formatMonthYear(currentDate))}</span>
           </div>
 
           <button
@@ -305,7 +306,7 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
       </div>
 
       <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:hidden">
-        <span className="text-sm font-bold capitalize text-slate-900 dark:text-white">
+        <span className="text-sm font-bold text-slate-900 dark:text-white">
           {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
         </span>
         <CalendarIcon size={18} className="text-primary" />
