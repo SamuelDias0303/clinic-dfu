@@ -58,7 +58,16 @@ const mix = packageProgress({ totalSessions: 10, status: 'ATIVO' }, [
   { status: 'CONCLUÍDO' }, { status: 'CONCLUÍDO' }, { status: 'CONCLUÍDO' },
   { status: 'CANCELADO' }, { status: 'CANCELADO' }, { status: 'AGUARDANDO' },
 ]);
-assert.deepEqual(mix, { used: 3, total: 10, remaining: 7, complete: false, open: true });
+assert.deepEqual(mix, { used: 3, total: 10, remaining: 7, complete: false, open: true, ending: false });
+
+// Aviso de fim de pacote: aberto e restando 1 ou 2 sessões.
+const ending = (used: number, status: 'ATIVO' | 'ENCERRADO' = 'ATIVO') =>
+  packageProgress({ totalSessions: 10, status }, Array.from({ length: used }, () => ({ status: 'CONCLUÍDO' as const }))).ending;
+assert.equal(ending(7), false);
+assert.equal(ending(8), true);
+assert.equal(ending(9), true);
+assert.equal(ending(10), false);
+assert.equal(ending(9, 'ENCERRADO'), false);
 
 const done = packageProgress({ totalSessions: 2, status: 'ATIVO' }, [
   { status: 'CONCLUÍDO' }, { status: 'CONCLUÍDO' },
@@ -107,6 +116,8 @@ assert.deepEqual(
   [[1, 4, 3, false], [0, 3, 3, false], [2, 2, 0, true]],
 );
 assert.equal(rows.find((row) => row.packageId === 'k1')?.therapistName, 'Dra. Raiza');
+// k1 (1 de 4, restam 3) não está no fim; k5 (0 de 3) também não; k2 está completo.
+assert.deepEqual(rows.map((row) => row.ending), [false, false, false]);
 assert.equal(rows.find((row) => row.packageId === 'k5')?.therapistName, 'Sem terapeuta');
 
 // Evolução pendente: sessão concluída sem evolução vinculada nem texto no agendamento.

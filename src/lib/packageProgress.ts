@@ -1,5 +1,8 @@
 import type { Appointment, Package, Patient } from '../types';
 
+// Avisa a família quando restam até este número de sessões.
+export const PACKAGE_ENDING_THRESHOLD = 2;
+
 // Sessões usadas são derivadas dos agendamentos, nunca gravadas: cancelar,
 // reabrir ou apagar uma sessão corrige o número sozinho.
 export function packageProgress(
@@ -9,13 +12,16 @@ export function packageProgress(
   const used = appointments.filter((appointment) => appointment.status === 'CONCLUÍDO').length;
   const total = pkg.totalSessions;
   const complete = used >= total;
+  const remaining = Math.max(total - used, 0);
+  const open = pkg.status === 'ATIVO' && !complete;
 
   return {
     used,
     total,
-    remaining: Math.max(total - used, 0),
+    remaining,
     complete,
-    open: pkg.status === 'ATIVO' && !complete,
+    open,
+    ending: open && remaining <= PACKAGE_ENDING_THRESHOLD,
   };
 }
 
@@ -29,6 +35,7 @@ export interface PackageOverviewRow {
   total: number;
   remaining: number;
   complete: boolean;
+  ending: boolean;
 }
 
 // Uma linha por pacote não encerrado, com o terapeuta do paciente. Pacote cujo
@@ -56,6 +63,7 @@ export function packageOverview(
         total: progress.total,
         remaining: progress.remaining,
         complete: progress.complete,
+        ending: progress.ending,
       };
     })
     .sort((a, b) =>

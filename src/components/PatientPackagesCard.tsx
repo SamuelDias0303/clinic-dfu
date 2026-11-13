@@ -147,6 +147,11 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
                 >
                   <div className="h-full bg-[#1e5d8c] dark:bg-blue-600" style={{ width: `${percent}%` }} />
                 </div>
+                {progress.ending && (
+                  <p className="mt-2 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    Restam {progress.remaining} {progress.remaining === 1 ? 'sessão' : 'sessões'}: avise a família sobre a renovação.
+                  </p>
+                )}
               </li>
             );
           })}

@@ -25,6 +25,7 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
   }, [rows]);
 
   const visibleRows = therapistFilter ? rows.filter((row) => row.therapistId === therapistFilter) : rows;
+  const endingCount = visibleRows.filter((row) => row.ending).length;
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -32,6 +33,11 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
         <h3 className="flex items-center gap-2 font-bold text-slate-800 dark:text-white">
           <PackageIcon size={18} className="text-primary" />
           Pacotes de atendimento
+          {endingCount > 0 && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              {endingCount} perto do fim
+            </span>
+          )}
         </h3>
         {canFilterByTherapist && therapists.length > 0 && (
           <select
@@ -82,7 +88,11 @@ export default function PackagesOverviewCard({ packages, patients, appointments,
                       </div>
                     </td>
                     <td className="px-6 py-3 text-sm text-slate-600 dark:text-slate-300">
-                      {row.complete ? 'Concluído' : row.remaining}
+                      {row.complete ? 'Concluído' : row.ending ? (
+                        <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          Restam {row.remaining}: avise a família
+                        </span>
+                      ) : row.remaining}
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex justify-end gap-1">
