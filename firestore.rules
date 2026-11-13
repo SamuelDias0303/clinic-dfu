@@ -285,6 +285,25 @@ service cloud.firestore {
         );
     }
 
+    // Pacote de atendimento: so total de sessoes e status. As sessoes usadas
+    // sao calculadas no cliente pelos agendamentos CONCLUIDO com o mesmo
+    // packageId, entao nada aqui precisa ser estornado.
+    function isValidPackageCreate() {
+      let data = request.resource.data;
+      return data.patientId is string
+        && data.patientId.size() > 0
+        && data.totalSessions is int
+        && data.totalSessions >= 1 && data.totalSessions <= 200
+        && data.status == 'ATIVO';
+    }
+
+    // Depois de criado, so o status muda (encerrar pacote).
+    function isValidPackageClose() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['ATIVO', 'ENCERRADO'];
+    }
+
     match /users/{userId} {
       allow read: if isAdminGlobal() || isOwnMemberDoc(userId);
       allow create: if isAdminGlobal()
@@ -518,6 +537,37 @@ service cloud.firestore {
             )
           );
         allow delete: if isAdminGlobal() || isGestor(whitelabelId) || isRecepcao(whitelabelId);
+      }
+
+      match /packages/{packageId} {
+        allow read: if existingTenantFieldIsValid(whitelabelId)
+          && (isAdminGlobal() || isActiveMember(whitelabelId));
+        allow create: if isValidPackageCreate()
+          && (
+            isAdminGlobal()
+            || (
+              tenantFieldIsValid(whitelabelId)
+              && (
+                isGestor(whitelabelId)
+                || isRecepcao(whitelabelId)
+                || isTerapeuta(whitelabelId)
+              )
+            )
+          );
+        allow update: if isValidPackageClose()
+          && (
+            isAdminGlobal()
+            || (
+              existingTenantFieldIsValid(whitelabelId)
+              && tenantFieldIsValid(whitelabelId)
+              && (
+                isGestor(whitelabelId)
+                || isRecepcao(whitelabelId)
+                || isTerapeuta(whitelabelId)
+              )
+            )
+          );
+        allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }
 
       match /evolutions/{evolutionId} {

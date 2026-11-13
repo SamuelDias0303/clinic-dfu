@@ -10,6 +10,7 @@ export const TENANT_COLLECTIONS = {
   patients: 'patients',
   therapists: 'therapists',
   appointments: 'appointments',
+  packages: 'packages',
   evolutions: 'evolutions',
   anamneses: 'anamneses',
   auditLogs: 'auditLogs',

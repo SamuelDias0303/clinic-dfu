@@ -382,6 +382,16 @@ export interface SiteContent {
   atualizadoPor?: string;
 }
 
+export interface Package {
+  id?: string;
+  whitelabelId?: string;
+  patientId: string;
+  totalSessions: number;
+  status: 'ATIVO' | 'ENCERRADO';
+  createdBy: string;
+  createdAt?: any;
+}
+
 export interface Appointment {
   id?: string;
   whitelabelId?: string;
@@ -396,6 +406,7 @@ export interface Appointment {
   notes?: string;
   clinicalEvolution?: string;
   evolutionId?: string;
+  packageId?: string;
   recurrence?: 'NONE' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
   recurrenceDays?: number[]; // 0-6 (Sunday-Saturday)
   recurrenceId?: string;
