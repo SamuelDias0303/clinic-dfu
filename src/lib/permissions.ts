@@ -3,7 +3,7 @@ import { UserRole, WhitelabelMembership } from '../types';
 export const ROLE_LABELS: Record<UserRole, string> = {
   ADMIN_GLOBAL: 'Administrador Global',
   GESTOR: 'Gestor',
-  REPCAO: 'Recepcao',
+  REPCAO: 'Recepção',
   TERAPEUTA: 'Terapeuta',
 };
 

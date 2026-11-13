@@ -43,7 +43,7 @@ const STATUS_META: Record<LeadStatus, { label: string; chip: string }> = {
 };
 
 const FAIXA_LABEL: Record<string, string> = {
-  '0-1m': '0-1 mes',
+  '0-1m': '0-1 mês',
   '1-3m': '1-3 meses',
   '3-6m': '3-6 meses',
   '6-12m': '6-12 meses',
@@ -53,8 +53,8 @@ const FAIXA_LABEL: Record<string, string> = {
 
 function toCsv(leads: Lead[]) {
   const header = [
-    'Data', 'Responsavel', 'WhatsApp', 'Bebe', 'Idade', 'Preocupacoes', 'Outro motivo',
-    'Periodo', 'Gestacao e parto', 'Endereco', 'Status', 'Prioritario', 'Origem',
+    'Data', 'Responsável', 'WhatsApp', 'Bebê', 'Idade', 'Preocupações', 'Outro motivo',
+    'Período', 'Gestação e parto', 'Endereço', 'Status', 'Prioritário', 'Origem',
   ];
   const escape = (value: string) => `"${String(value ?? '').replace(/"/g, '""')}"`;
   const rows = leads.map((lead) => [
@@ -134,19 +134,19 @@ export default function CaptacaoView() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 lg:space-y-6">
       <div>
         <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Captacao
+          Captação
         </h2>
         <p className="text-slate-500 dark:text-slate-400 text-xs lg:text-sm mt-1 font-medium">
-          Solicitacoes recebidas pelo site e conteudo publicado na pagina.
+          Solicitações recebidas pelo site e conteúdo publicado na página.
         </p>
       </div>
 
       <div className="flex items-center gap-1 border-b border-slate-200 dark:border-slate-800">
         {([
-          ['SOLICITACOES', `Solicitacoes${novos ? ` (${novos})` : ''}`],
+          ['SOLICITACOES', `Solicitações${novos ? ` (${novos})` : ''}`],
           ['LISTA_ESPERA', `Lista de espera${fila.length ? ` (${fila.length})` : ''}`],
           ['DEPOIMENTOS',`Depoimentos${depoimentosPendentes ? ` (${depoimentosPendentes})` : ''}`],
-          ['CONTEUDO', 'Conteudo do site'],
+          ['CONTEUDO', 'Conteúdo do site'],
         ] as [Tab, string][]).map(([id, label]) => (
           <button
             key={id}
@@ -227,10 +227,10 @@ export default function CaptacaoView() {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center">
               <p className="text-slate-500 dark:text-slate-400">
                 {leads.length === 0
-                  ? 'Nenhuma solicitacao recebida pelo site ainda.'
+                  ? 'Nenhuma solicitação recebida pelo site ainda.'
                   : filter === 'ARQUIVADAS'
-                    ? 'Nenhuma solicitacao arquivada.'
-                    : 'Nenhuma solicitacao neste status.'}
+                    ? 'Nenhuma solicitação arquivada.'
+                    : 'Nenhuma solicitação neste status.'}
               </p>
             </div>
           ) : (
@@ -240,10 +240,10 @@ export default function CaptacaoView() {
                   <thead className="bg-slate-50 dark:bg-slate-800/60">
                     <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
                       {filter === 'LISTA_ESPERA' && <th className="px-4 py-3 font-semibold">#</th>}
-                      <th className="px-4 py-3 font-semibold">Responsavel</th>
+                      <th className="px-4 py-3 font-semibold">Responsável</th>
                       <th className="px-4 py-3 font-semibold">WhatsApp</th>
-                      <th className="px-4 py-3 font-semibold">Bebe</th>
-                      <th className="px-4 py-3 font-semibold">Preocupacoes</th>
+                      <th className="px-4 py-3 font-semibold">Bebê</th>
+                      <th className="px-4 py-3 font-semibold">Preocupações</th>
                       <th className="px-4 py-3 font-semibold">Recebido</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                     </tr>
@@ -259,7 +259,7 @@ export default function CaptacaoView() {
                           <td className="px-4 py-3 font-bold text-slate-900 dark:text-slate-100">{index + 1}</td>
                         )}
                         <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
-                          {lead.prioritario && <span className="text-amber-500 mr-1" title="Prioritario">★</span>}
+                          {lead.prioritario && <span className="text-amber-500 mr-1" title="Prioritário">★</span>}
                           {lead.responsavel}
                         </td>
                         <td className="px-4 py-3 text-slate-600 dark:text-slate-400">{lead.whatsapp}</td>

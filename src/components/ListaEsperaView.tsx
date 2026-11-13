@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { linkChamar } from '../lib/listaEspera';
 
 const FAIXA_LABEL: Record<string, string> = {
-  '0-1m': '0-1 mes',
+  '0-1m': '0-1 mês',
   '1-3m': '1-3 meses',
   '3-6m': '3-6 meses',
   '6-12m': '6-12 meses',
@@ -35,7 +35,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
       await leadService.updateLead(lead.id, { prioritario: !lead.prioritario }, whitelabelId);
     } catch (err) {
       console.error(err);
-      setErro('Nao foi possivel alterar a prioridade.');
+      setErro('Não foi possível alterar a prioridade.');
     } finally {
       setProcessandoId(null);
     }
@@ -43,7 +43,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
 
   const arquivar = async (lead: Lead) => {
     if (!lead.id) return;
-    if (!window.confirm(`Arquivar ${lead.responsavel}? Sai da lista de espera e pode ser restaurado em Solicitacoes > Arquivadas.`)) {
+    if (!window.confirm(`Arquivar ${lead.responsavel}? Sai da lista de espera e pode ser restaurado em Solicitações > Arquivadas.`)) {
       return;
     }
     setProcessandoId(lead.id);
@@ -52,7 +52,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
       await leadService.setArquivado(lead.id, true, whitelabelId);
     } catch (err) {
       console.error(err);
-      setErro('Nao foi possivel arquivar.');
+      setErro('Não foi possível arquivar.');
     } finally {
       setProcessandoId(null);
     }
@@ -78,7 +78,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
       await leadService.updateStatus(lead.id, 'EM_CONTATO', whitelabelId);
     } catch (err) {
       console.error(err);
-      setErro('WhatsApp aberto, mas nao foi possivel mover o contato para "Em contato". Atualize o status no detalhe.');
+      setErro('WhatsApp aberto, mas não foi possível mover o contato para "Em contato". Atualize o status no detalhe.');
     } finally {
       setProcessandoId(null);
     }
@@ -88,8 +88,8 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xl">
-          Fila de quem preencheu o formulario com a agenda lotada. Contatos que chegaram so pelo
-          WhatsApp nao aparecem aqui — para incluir alguem, abra a solicitacao em Solicitacoes e
+          Fila de quem preencheu o formulário com a agenda lotada. Contatos que chegaram só pelo
+          WhatsApp não aparecem aqui — para incluir alguem, abra a solicitação em Solicitações e
           mude o status para Lista de espera.
         </p>
         <button
@@ -98,7 +98,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
           onClick={() => chamar(fila[0])}
           className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
         >
-          <MessageCircle size={16} /> Chamar proximo
+          <MessageCircle size={16} /> Chamar próximo
         </button>
       </div>
 
@@ -110,7 +110,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
 
       {fila.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center">
-          <p className="text-slate-500 dark:text-slate-400">Ninguem na lista de espera.</p>
+          <p className="text-slate-500 dark:text-slate-400">Ninguém na lista de espera.</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden">
@@ -119,11 +119,11 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
               <thead className="bg-slate-50 dark:bg-slate-800/60">
                 <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500">
                   <th className="px-4 py-3 font-semibold">#</th>
-                  <th className="px-4 py-3 font-semibold">Responsavel</th>
-                  <th className="px-4 py-3 font-semibold">Bebe</th>
-                  <th className="px-4 py-3 font-semibold">Preocupacoes</th>
+                  <th className="px-4 py-3 font-semibold">Responsável</th>
+                  <th className="px-4 py-3 font-semibold">Bebê</th>
+                  <th className="px-4 py-3 font-semibold">Preocupações</th>
                   <th className="px-4 py-3 font-semibold">Entrou em</th>
-                  <th className="px-4 py-3 font-semibold text-right">Acoes</th>
+                  <th className="px-4 py-3 font-semibold text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -157,7 +157,7 @@ export default function ListaEsperaView({ fila, onSelect }: ListaEsperaViewProps
                           disabled={processandoId === lead.id}
                           onClick={() => alternarPrioridade(lead)}
                           aria-label={lead.prioritario ? 'Remover prioridade' : 'Priorizar'}
-                          title={lead.prioritario ? 'Prioritario (clique para remover)' : 'Priorizar'}
+                          title={lead.prioritario ? 'Prioritário (clique para remover)' : 'Priorizar'}
                           className={`p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-50 ${
                             lead.prioritario ? 'text-amber-500' : 'text-slate-300'
                           }`}

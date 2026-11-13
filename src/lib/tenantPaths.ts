@@ -29,7 +29,7 @@ export type TenantCollection = typeof TENANT_COLLECTIONS[keyof typeof TENANT_COL
 
 export function assertWhitelabelId(whitelabelId: string) {
   if (!whitelabelId || !whitelabelId.trim()) {
-    throw new Error('whitelabelId e obrigatorio para acessar dados com escopo de whitelabel.');
+    throw new Error('whitelabelId é obrigatório para acessar dados com escopo de whitelabel.');
   }
 }
 
@@ -44,7 +44,7 @@ export function tenantCollectionPath(whitelabelId: string, collectionName: Tenan
 
 export function tenantDocPath(whitelabelId: string, collectionName: TenantCollection, docId: string) {
   if (!docId || !docId.trim()) {
-    throw new Error('docId e obrigatorio para acessar um documento com escopo de whitelabel.');
+    throw new Error('docId é obrigatório para acessar um documento com escopo de whitelabel.');
   }
 
   return `${tenantCollectionPath(whitelabelId, collectionName)}/${docId}`;
@@ -56,7 +56,7 @@ export function memberDocPath(whitelabelId: string, userId: string) {
 
 export function userDocPath(userId: string) {
   if (!userId || !userId.trim()) {
-    throw new Error('userId e obrigatorio para acessar perfil de usuario.');
+    throw new Error('userId é obrigatório para acessar perfil de usuário.');
   }
 
   return `${ROOT_COLLECTIONS.users}/${userId}`;
@@ -64,7 +64,7 @@ export function userDocPath(userId: string) {
 
 export function legacyClientDocPath(clientId: string) {
   if (!clientId || !clientId.trim()) {
-    throw new Error('clientId e obrigatorio para acessar cliente legado.');
+    throw new Error('clientId é obrigatório para acessar cliente legado.');
   }
 
   return `${ROOT_COLLECTIONS.legacyClients}/${clientId}`;

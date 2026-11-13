@@ -41,7 +41,7 @@ export default function DepoimentosModeracao() {
       await testimonialService.approve(item, papelPublicado, whitelabelId, user?.email);
     } catch (err) {
       console.error(err);
-      setErro(err instanceof Error ? err.message : 'Nao foi possivel aprovar o depoimento.');
+      setErro(err instanceof Error ? err.message : 'Não foi possível aprovar o depoimento.');
     } finally {
       setProcessandoId(null);
     }
@@ -55,7 +55,7 @@ export default function DepoimentosModeracao() {
       await testimonialService.reject(item.id, whitelabelId);
     } catch (err) {
       console.error(err);
-      setErro('Nao foi possivel rejeitar o depoimento.');
+      setErro('Não foi possível rejeitar o depoimento.');
     } finally {
       setProcessandoId(null);
     }
@@ -79,7 +79,7 @@ export default function DepoimentosModeracao() {
 
       {itens.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center">
-          <p className="text-slate-500 dark:text-slate-400">Nenhum depoimento pendente de revisao.</p>
+          <p className="text-slate-500 dark:text-slate-400">Nenhum depoimento pendente de revisão.</p>
         </div>
       ) : (
         <div className="space-y-3">

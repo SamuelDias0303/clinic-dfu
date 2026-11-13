@@ -61,10 +61,10 @@ export const siteContentService = {
     whitelabelId?: string | null
   ): Promise<SiteImageRef> {
     if (!whitelabelId) {
-      throw new Error('whitelabelId e obrigatorio para enviar imagem do site.');
+      throw new Error('whitelabelId é obrigatório para enviar imagem do site.');
     }
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      throw new Error('Formato invalido. Use JPEG, PNG, WebP ou AVIF.');
+      throw new Error('Formato inválido. Use JPEG, PNG, WebP ou AVIF.');
     }
     if (file.size > MAX_IMAGE_BYTES) {
       throw new Error('Imagem muito grande. O limite e 5 MB.');
@@ -92,7 +92,7 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Nao foi possivel ler a imagem enviada.'));
+      reject(new Error('Não foi possível ler a imagem enviada.'));
     };
     image.src = url;
   });

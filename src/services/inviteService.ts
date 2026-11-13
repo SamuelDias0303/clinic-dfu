@@ -58,7 +58,7 @@ function validateInvite(invite: UserInvite) {
   if (!invite.whitelabelId) throw new Error('Convite sem whitelabel.');
   if (!invite.email) throw new Error('Convite sem e-mail.');
   if (!invite.roles.length) throw new Error('Convite sem papel definido.');
-  if (invite.status !== 'PENDENTE') throw new Error('Convite nao esta pendente.');
+  if (invite.status !== 'PENDENTE') throw new Error('Convite não está pendente.');
 }
 
 export function buildInviteUrl(token: string) {
@@ -130,7 +130,7 @@ export const inviteService = {
     const inviteSnapshot = await getDoc(inviteRef);
 
     if (!inviteSnapshot.exists()) {
-      throw new Error('Convite nao encontrado.');
+      throw new Error('Convite não encontrado.');
     }
 
     const currentInvite = {
@@ -141,7 +141,7 @@ export const inviteService = {
     validateInvite(currentInvite);
 
     if (userEmail && normalizeEmail(userEmail) !== normalizeEmail(currentInvite.email)) {
-      throw new Error('A conta autenticada nao corresponde ao e-mail do convite.');
+      throw new Error('A conta autenticada não corresponde ao e-mail do convite.');
     }
 
     const memberRef = scopedDoc(COLLECTIONS.members, userId, currentInvite.whitelabelId);

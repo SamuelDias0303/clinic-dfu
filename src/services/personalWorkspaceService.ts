@@ -76,7 +76,7 @@ export const personalWorkspaceService = {
       },
       settings: {
         defaultUnitName: 'Atendimento Individual',
-        appointmentTypes: ['Consulta', 'Avaliacao', 'Retorno'],
+        appointmentTypes: ['Consulta', 'Avaliação', 'Retorno'],
         therapistSpecialties: ['Terapeuta Geral'],
         enabledFeatures: ['agenda', 'pacientes', 'prontuario'],
       },

@@ -67,7 +67,7 @@ export const patientService = {
   ): Promise<{ motherName: boolean; address: boolean }> {
     const docRef = scopedDoc(COLLECTIONS.patients, id, whitelabelId);
     const snapshot = await getDoc(docRef);
-    if (!snapshot.exists()) throw new Error('Paciente nao encontrado.');
+    if (!snapshot.exists()) throw new Error('Paciente não encontrado.');
     const atual = snapshot.data() as Patient;
 
     const patch: Partial<Patient> = {};

@@ -118,7 +118,7 @@ export const appointmentService = {
     for (const app of appointmentsToCreate) {
       const hasConflict = await this.checkConflict(app.therapistId, app.date, app.time, undefined, whitelabelId);
       if (hasConflict) {
-        throw new Error(`Conflito de horario detectado em ${app.date} as ${app.time}`);
+        throw new Error(`Conflito de horário detectado em ${app.date} as ${app.time}`);
       }
     }
 
@@ -167,7 +167,7 @@ export const appointmentService = {
 
     if (appointment.date || appointment.time || appointment.therapistId) {
       const snapshot = await getDoc(docRef);
-      if (!snapshot.exists()) throw new Error('Agendamento nao encontrado.');
+      if (!snapshot.exists()) throw new Error('Agendamento não encontrado.');
       const current = snapshot.data() as Appointment;
 
       const therapistId = appointment.therapistId || current.therapistId;
@@ -176,7 +176,7 @@ export const appointmentService = {
 
       const hasConflict = await this.checkConflict(therapistId, date, time, id, whitelabelId);
       if (hasConflict) {
-        throw new Error(`Conflito de horario detectado em ${date} as ${time}`);
+        throw new Error(`Conflito de horário detectado em ${date} as ${time}`);
       }
     }
 
@@ -184,13 +184,13 @@ export const appointmentService = {
   },
 
   async deleteAppointment(id: string, whitelabelId?: string | null) {
-    if (!id) throw new Error('ID do agendamento e obrigatorio para exclusao.');
+    if (!id) throw new Error('ID do agendamento é obrigatório para exclusão.');
     const docRef = scopedDoc(COLLECTIONS.appointments, id, whitelabelId);
     await deleteDoc(docRef);
   },
 
   async deleteRecurrence(recurrenceId: string, whitelabelId?: string | null) {
-    if (!recurrenceId) throw new Error('ID da recorrencia e obrigatorio.');
+    if (!recurrenceId) throw new Error('ID da recorrência é obrigatório.');
 
     const q = query(
       scopedCollection(COLLECTIONS.appointments, whitelabelId),

@@ -27,7 +27,7 @@ function parseList(value: string) {
 
 export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initialData }: WhitelabelFormModalProps) {
   const [loading, setLoading] = useState(false);
-  const [appointmentTypesInput, setAppointmentTypesInput] = useState('Consulta, Avaliacao, Retorno, Exame');
+  const [appointmentTypesInput, setAppointmentTypesInput] = useState('Consulta, Avaliação, Retorno, Exame');
   const [therapistSpecialtiesInput, setTherapistSpecialtiesInput] = useState(defaultTherapistSpecialties.join(', '));
   const [formData, setFormData] = useState<Omit<Whitelabel, 'id' | 'createdAt' | 'updatedAt'>>({
     name: '',
@@ -42,7 +42,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
     },
     settings: {
       defaultUnitName: 'Unidade Principal',
-      appointmentTypes: ['Consulta', 'Avaliacao', 'Retorno', 'Exame'],
+      appointmentTypes: ['Consulta', 'Avaliação', 'Retorno', 'Exame'],
       therapistSpecialties: defaultTherapistSpecialties,
       enabledFeatures: ['agenda', 'pacientes', 'prontuario'],
     },
@@ -51,7 +51,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
   useEffect(() => {
     if (initialData) {
       const { id, createdAt, updatedAt, ...rest } = initialData;
-      const appointmentTypes = rest.settings?.appointmentTypes || ['Consulta', 'Avaliacao', 'Retorno', 'Exame'];
+      const appointmentTypes = rest.settings?.appointmentTypes || ['Consulta', 'Avaliação', 'Retorno', 'Exame'];
       const therapistSpecialties = rest.settings?.therapistSpecialties || defaultTherapistSpecialties;
 
       setAppointmentTypesInput(appointmentTypes.join(', '));
@@ -70,7 +70,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
         },
       });
     } else {
-      setAppointmentTypesInput('Consulta, Avaliacao, Retorno, Exame');
+      setAppointmentTypesInput('Consulta, Avaliação, Retorno, Exame');
       setTherapistSpecialtiesInput(defaultTherapistSpecialties.join(', '));
       setFormData({
         name: '',
@@ -85,7 +85,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
         },
         settings: {
           defaultUnitName: 'Unidade Principal',
-          appointmentTypes: ['Consulta', 'Avaliacao', 'Retorno', 'Exame'],
+          appointmentTypes: ['Consulta', 'Avaliação', 'Retorno', 'Exame'],
           therapistSpecialties: defaultTherapistSpecialties,
           enabledFeatures: ['agenda', 'pacientes', 'prontuario'],
         },
@@ -135,7 +135,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
               {initialData ? 'Editar Whitelabel' : 'Novo Whitelabel'}
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Configuracoes principais do ambiente.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Configurações principais do ambiente.</p>
           </div>
           <button onClick={onClose} className="shrink-0 p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors">
             <X size={20} className="text-slate-500" />
@@ -155,7 +155,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
                   setFormData({ ...formData, name, slug: initialData ? formData.slug : buildSlug(name) });
                 }}
                 className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                placeholder="Ex: Clinica Norte"
+                placeholder="Ex: Clínica Norte"
               />
             </div>
 
@@ -171,7 +171,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Dominio</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Domínio</label>
               <input
                 value={formData.domain || ''}
                 onChange={(event) => setFormData({ ...formData, domain: event.target.value })}
@@ -213,7 +213,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cor primaria</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Cor primária</label>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -251,7 +251,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
 
           <div className="grid grid-cols-1 gap-4 pt-2 md:grid-cols-2">
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Unidade padrao</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Unidade padrão</label>
               <input
                 value={formData.settings?.defaultUnitName || ''}
                 onChange={(event) => setFormData({
@@ -268,7 +268,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
                 value={appointmentTypesInput}
                 onChange={(event) => setAppointmentTypesInput(event.target.value)}
                 className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                placeholder="Consulta, Avaliacao, Retorno"
+                placeholder="Consulta, Avaliação, Retorno"
               />
             </div>
 
@@ -281,7 +281,7 @@ export default function WhitelabelFormModal({ isOpen, onClose, onSubmit, initial
                 placeholder="Fisioterapia, Fonoaudiologia, Terapia Ocupacional"
               />
               <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                Use virgulas para separar as modalidades disponiveis para convites de terapeutas.
+                Use vírgulas para separar as modalidades disponíveis para convites de terapeutas.
               </p>
             </div>
           </div>

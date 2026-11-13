@@ -47,7 +47,7 @@ export default function CompletarConvertidosModal({ leads, onClose }: CompletarC
         setMarcados(new Set(calculo.ajustes.map((a) => a.leadId)));
       } catch (e) {
         console.error(e);
-        if (ativo) setErro('Nao foi possivel carregar pacientes e anamneses. Verifique suas permissoes.');
+        if (ativo) setErro('Não foi possível carregar pacientes e anamneses. Verifique suas permissões.');
       } finally {
         if (ativo) setCarregando(false);
       }
@@ -85,7 +85,7 @@ export default function CompletarConvertidosModal({ leads, onClose }: CompletarC
       setResultados(await leadService.aplicarAjustes(selecionados, whitelabelId));
     } catch (e) {
       console.error(e);
-      setErro('Nao foi possivel aplicar. Tente novamente.');
+      setErro('Não foi possível aplicar. Tente novamente.');
     } finally {
       setAplicando(false);
     }

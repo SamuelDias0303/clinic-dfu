@@ -85,7 +85,7 @@ export const testimonialService = {
 
     const current = await siteContentService.getContent(whitelabelId);
     if (!current) {
-      throw new Error('O conteudo do site ainda nao foi publicado — publique antes de aprovar depoimentos.');
+      throw new Error('O conteúdo do site ainda não foi publicado — publique antes de aprovar depoimentos.');
     }
 
     const inicial = item.nome.trim().charAt(0).toUpperCase() || '?';

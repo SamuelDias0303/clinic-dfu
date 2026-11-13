@@ -182,7 +182,7 @@ export default function SiteContentEditor() {
       })
       .catch((error) => {
         console.error(error);
-        if (active) setMessage({ tone: 'erro', text: 'Nao foi possivel carregar o conteudo.' });
+        if (active) setMessage({ tone: 'erro', text: 'Não foi possível carregar o conteúdo.' });
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -202,10 +202,10 @@ export default function SiteContentEditor() {
     setMessage(null);
     try {
       await siteContentService.saveContent(draft, whitelabelId, user?.email);
-      setMessage({ tone: 'ok', text: 'Conteudo publicado. O site reflete a mudanca no proximo carregamento.' });
+      setMessage({ tone: 'ok', text: 'Conteúdo publicado. O site reflete a mudança no próximo carregamento.' });
     } catch (error) {
       console.error(error);
-      setMessage({ tone: 'erro', text: 'Nao foi possivel salvar. Verifique suas permissoes.' });
+      setMessage({ tone: 'erro', text: 'Não foi possível salvar. Verifique suas permissões.' });
     } finally {
       setSaving(false);
     }
@@ -232,7 +232,7 @@ export default function SiteContentEditor() {
       setMessage({ tone: 'ok', text: 'JSON carregado. Revise e clique em Publicar para salvar.' });
     } catch (error) {
       console.error(error);
-      setMessage({ tone: 'erro', text: 'Arquivo invalido. Use o JSON exportado da landing page.' });
+      setMessage({ tone: 'erro', text: 'Arquivo inválido. Use o JSON exportado da landing page.' });
     }
   };
 
@@ -240,10 +240,10 @@ export default function SiteContentEditor() {
     return (
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-2">
         <p className="text-slate-600 dark:text-slate-300 font-medium">
-          Selecione um whitelabel real para editar o conteudo do site.
+          Selecione um whitelabel real para editar o conteúdo do site.
         </p>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          O ambiente legado nao possui site publico associado.
+          O ambiente legado não possui site público associado.
         </p>
       </div>
     );
@@ -314,11 +314,11 @@ export default function SiteContentEditor() {
       {!draft ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center space-y-2">
           <p className="text-slate-600 dark:text-slate-300 font-medium">
-            Nenhum conteudo publicado para este whitelabel.
+            Nenhum conteúdo publicado para este whitelabel.
           </p>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Importe o arquivo <code>site-content.seed.json</code> do repositorio da landing page para
-            comecar a partir do conteudo que ja esta no ar.
+            Importe o arquivo <code>site-content.seed.json</code> do repositório da landing page para
+            começar a partir do conteúdo que já está no ar.
           </p>
         </div>
       ) : (
@@ -340,34 +340,34 @@ export default function SiteContentEditor() {
                 className="mt-1 w-4 h-4"
               />
               <span className="text-sm text-slate-700 dark:text-slate-200">
-                <strong>Agenda lotada</strong> — todos os botoes de agendamento viram "Entrar na lista de espera".
+                <strong>Agenda lotada</strong> — todos os botões de agendamento viram "Entrar na lista de espera".
                 Depois de marcar, clique em Publicar.
               </span>
             </label>
             <Field
-              label="Mensagem de confirmacao (opcional)"
+              label="Mensagem de confirmação (opcional)"
               value={draft.agenda.mensagem ?? ''}
               rows={2}
-              hint="Aparece depois que a pessoa entra na lista. Vazio usa o texto padrao."
+              hint="Aparece depois que a pessoa entra na lista. Vazio usa o texto padrão."
               onChange={(v) => patch('agenda', { ...draft.agenda, mensagem: v })}
             />
           </Section>
 
-          <Section title="Topo da pagina" description="Primeira dobra: badge, titulo e botoes." defaultOpen>
+          <Section title="Topo da página" description="Primeira dobra: badge, título e botões." defaultOpen>
             <Field label="Badge" value={draft.hero.badge} onChange={(v) => patch('hero', { ...draft.hero, badge: v })} />
             <Field
-              label="Titulo"
+              label="Título"
               value={draft.hero.titulo}
               rows={2}
-              hint="Ex.: O cuidado exato para o *desenvolvimento perfeito* do seu bebe."
+              hint="Ex.: O cuidado exato para o *desenvolvimento perfeito* do seu bebê."
               onChange={(v) => patch('hero', { ...draft.hero, titulo: v })}
             />
-            <Field label="Subtitulo" value={draft.hero.subtitulo} rows={3} onChange={(v) => patch('hero', { ...draft.hero, subtitulo: v })} />
+            <Field label="Subtítulo" value={draft.hero.subtitulo} rows={3} onChange={(v) => patch('hero', { ...draft.hero, subtitulo: v })} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Botao principal" value={draft.hero.ctaPrimario} onChange={(v) => patch('hero', { ...draft.hero, ctaPrimario: v })} />
-              <Field label="Botao secundario" value={draft.hero.ctaSecundario} onChange={(v) => patch('hero', { ...draft.hero, ctaSecundario: v })} />
-              <Field label="Selo — titulo" value={draft.hero.seloTitulo} onChange={(v) => patch('hero', { ...draft.hero, seloTitulo: v })} />
-              <Field label="Selo — subtitulo" value={draft.hero.seloSubtitulo} onChange={(v) => patch('hero', { ...draft.hero, seloSubtitulo: v })} />
+              <Field label="Botão principal" value={draft.hero.ctaPrimario} onChange={(v) => patch('hero', { ...draft.hero, ctaPrimario: v })} />
+              <Field label="Botão secundário" value={draft.hero.ctaSecundario} onChange={(v) => patch('hero', { ...draft.hero, ctaSecundario: v })} />
+              <Field label="Selo — título" value={draft.hero.seloTitulo} onChange={(v) => patch('hero', { ...draft.hero, seloTitulo: v })} />
+              <Field label="Selo — subtítulo" value={draft.hero.seloSubtitulo} onChange={(v) => patch('hero', { ...draft.hero, seloSubtitulo: v })} />
             </div>
           </Section>
 
@@ -379,18 +379,18 @@ export default function SiteContentEditor() {
               addLabel="Adicionar selo"
               renderItem={(item, update) => (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="Icone" value={item.icone} hint="Nome do icone lucide" onChange={(v) => update({ icone: v })} />
-                  <Field label="Titulo" value={item.titulo} onChange={(v) => update({ titulo: v })} />
+                  <Field label="Ícone" value={item.icone} hint="Nome do ícone lucide" onChange={(v) => update({ icone: v })} />
+                  <Field label="Título" value={item.titulo} onChange={(v) => update({ titulo: v })} />
                   <Field label="Detalhe" value={item.detalhe} onChange={(v) => update({ detalhe: v })} />
                 </div>
               )}
             />
           </Section>
 
-          <Section title="Sinais de atencao" description="Cards de sintomas que levam ao WhatsApp.">
+          <Section title="Sinais de atenção" description="Cards de sintomas que levam ao WhatsApp.">
             <Field label="Eyebrow" value={draft.sintomas.eyebrow} onChange={(v) => patch('sintomas', { ...draft.sintomas, eyebrow: v })} />
-            <Field label="Titulo" value={draft.sintomas.titulo} onChange={(v) => patch('sintomas', { ...draft.sintomas, titulo: v })} />
-            <Field label="Introducao" value={draft.sintomas.intro} rows={2} onChange={(v) => patch('sintomas', { ...draft.sintomas, intro: v })} />
+            <Field label="Título" value={draft.sintomas.titulo} onChange={(v) => patch('sintomas', { ...draft.sintomas, titulo: v })} />
+            <Field label="Introdução" value={draft.sintomas.intro} rows={2} onChange={(v) => patch('sintomas', { ...draft.sintomas, intro: v })} />
             <ListEditor
               items={draft.sintomas.itens}
               onChange={(itens) => patch('sintomas', { ...draft.sintomas, itens })}
@@ -398,13 +398,13 @@ export default function SiteContentEditor() {
               addLabel="Adicionar sintoma"
               renderItem={(item, update) => (
                 <>
-                  <Field label="Titulo" value={item.titulo} onChange={(v) => update({ titulo: v })} />
+                  <Field label="Título" value={item.titulo} onChange={(v) => update({ titulo: v })} />
                   <Field label="Texto" value={item.texto} rows={3} onChange={(v) => update({ texto: v })} />
                   <Field
                     label="Mensagem do WhatsApp"
                     value={item.mensagem}
                     rows={2}
-                    hint="Texto que ja vem preenchido quando a pessoa clica no card."
+                    hint="Texto que já vem preenchido quando a pessoa clica no card."
                     onChange={(v) => update({ mensagem: v })}
                   />
                 </>
@@ -414,8 +414,8 @@ export default function SiteContentEditor() {
 
           <Section title="Especialidades">
             <Field label="Eyebrow" value={draft.especialidades.eyebrow} onChange={(v) => patch('especialidades', { ...draft.especialidades, eyebrow: v })} />
-            <Field label="Titulo" value={draft.especialidades.titulo} onChange={(v) => patch('especialidades', { ...draft.especialidades, titulo: v })} />
-            <Field label="Introducao" value={draft.especialidades.intro} rows={2} onChange={(v) => patch('especialidades', { ...draft.especialidades, intro: v })} />
+            <Field label="Título" value={draft.especialidades.titulo} onChange={(v) => patch('especialidades', { ...draft.especialidades, titulo: v })} />
+            <Field label="Introdução" value={draft.especialidades.intro} rows={2} onChange={(v) => patch('especialidades', { ...draft.especialidades, intro: v })} />
             <ListEditor
               items={draft.especialidades.cards}
               onChange={(cards) => patch('especialidades', { ...draft.especialidades, cards })}
@@ -423,17 +423,17 @@ export default function SiteContentEditor() {
               addLabel="Adicionar especialidade"
               renderItem={(item, update) => (
                 <>
-                  <Field label="Titulo" value={item.titulo} onChange={(v) => update({ titulo: v })} />
+                  <Field label="Título" value={item.titulo} onChange={(v) => update({ titulo: v })} />
                   <Field label="Texto" value={item.texto} rows={3} onChange={(v) => update({ texto: v })} />
                 </>
               )}
             />
           </Section>
 
-          <Section title="Metodo De Setti">
+          <Section title="Método De Setti">
             <Field label="Badge" value={draft.metodo.badge} onChange={(v) => patch('metodo', { ...draft.metodo, badge: v })} />
-            <Field label="Titulo" value={draft.metodo.titulo} onChange={(v) => patch('metodo', { ...draft.metodo, titulo: v })} />
-            <Field label="Introducao" value={draft.metodo.intro} rows={3} onChange={(v) => patch('metodo', { ...draft.metodo, intro: v })} />
+            <Field label="Título" value={draft.metodo.titulo} onChange={(v) => patch('metodo', { ...draft.metodo, titulo: v })} />
+            <Field label="Introdução" value={draft.metodo.intro} rows={3} onChange={(v) => patch('metodo', { ...draft.metodo, intro: v })} />
             <ListEditor
               items={draft.metodo.pilares.map((texto) => ({ texto }))}
               onChange={(items) => patch('metodo', { ...draft.metodo, pilares: items.map((i) => i.texto) })}
@@ -447,7 +447,7 @@ export default function SiteContentEditor() {
 
           <Section title="Como funciona">
             <Field label="Eyebrow" value={draft.comoFunciona.eyebrow} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, eyebrow: v })} />
-            <Field label="Titulo" value={draft.comoFunciona.titulo} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, titulo: v })} />
+            <Field label="Título" value={draft.comoFunciona.titulo} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, titulo: v })} />
             <ListEditor
               items={draft.comoFunciona.passos}
               onChange={(passos) => patch('comoFunciona', { ...draft.comoFunciona, passos })}
@@ -456,21 +456,21 @@ export default function SiteContentEditor() {
               renderItem={(item, update) => (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-[100px_1fr] gap-3">
-                    <Field label="Numero" value={item.numero} onChange={(v) => update({ numero: v })} />
-                    <Field label="Titulo" value={item.titulo} onChange={(v) => update({ titulo: v })} />
+                    <Field label="Número" value={item.numero} onChange={(v) => update({ numero: v })} />
+                    <Field label="Título" value={item.titulo} onChange={(v) => update({ titulo: v })} />
                   </div>
                   <Field label="Texto" value={item.texto} rows={2} onChange={(v) => update({ texto: v })} />
                 </>
               )}
             />
-            <Field label="Destaque — titulo" value={draft.comoFunciona.destaqueTitulo} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, destaqueTitulo: v })} />
+            <Field label="Destaque — título" value={draft.comoFunciona.destaqueTitulo} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, destaqueTitulo: v })} />
             <Field label="Destaque — texto" value={draft.comoFunciona.destaqueTexto} rows={3} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, destaqueTexto: v })} />
-            <Field label="Destaque — botao" value={draft.comoFunciona.destaqueCta} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, destaqueCta: v })} />
+            <Field label="Destaque — botão" value={draft.comoFunciona.destaqueCta} onChange={(v) => patch('comoFunciona', { ...draft.comoFunciona, destaqueCta: v })} />
           </Section>
 
           <Section title="Sobre a profissional">
             <Field label="Eyebrow" value={draft.sobre.eyebrow} onChange={(v) => patch('sobre', { ...draft.sobre, eyebrow: v })} />
-            <Field label="Titulo" value={draft.sobre.titulo} onChange={(v) => patch('sobre', { ...draft.sobre, titulo: v })} />
+            <Field label="Título" value={draft.sobre.titulo} onChange={(v) => patch('sobre', { ...draft.sobre, titulo: v })} />
             <ListEditor
               items={draft.sobre.paragrafos.map((texto) => ({ texto }))}
               onChange={(items) => patch('sobre', { ...draft.sobre, paragrafos: items.map((i) => i.texto) })}
@@ -490,7 +490,7 @@ export default function SiteContentEditor() {
 
           <Section title="Depoimentos">
             <Field label="Eyebrow" value={draft.depoimentos.eyebrow} onChange={(v) => patch('depoimentos', { ...draft.depoimentos, eyebrow: v })} />
-            <Field label="Titulo" value={draft.depoimentos.titulo} onChange={(v) => patch('depoimentos', { ...draft.depoimentos, titulo: v })} />
+            <Field label="Título" value={draft.depoimentos.titulo} onChange={(v) => patch('depoimentos', { ...draft.depoimentos, titulo: v })} />
             <ListEditor
               items={draft.depoimentos.itens}
               onChange={(itens) => patch('depoimentos', { ...draft.depoimentos, itens })}
@@ -502,16 +502,16 @@ export default function SiteContentEditor() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Field label="Inicial" value={item.inicial} onChange={(v) => update({ inicial: v })} />
                     <Field label="Nome" value={item.nome} onChange={(v) => update({ nome: v })} />
-                    <Field label="Descricao" value={item.papel} onChange={(v) => update({ papel: v })} />
+                    <Field label="Descrição" value={item.papel} onChange={(v) => update({ papel: v })} />
                   </div>
                 </>
               )}
             />
           </Section>
 
-          <Section title="Duvidas frequentes" description="Tambem alimenta o FAQ estruturado para o Google.">
+          <Section title="Dúvidas frequentes" description="Também alimenta o FAQ estruturado para o Google.">
             <Field label="Eyebrow" value={draft.faq.eyebrow} onChange={(v) => patch('faq', { ...draft.faq, eyebrow: v })} />
-            <Field label="Titulo" value={draft.faq.titulo} onChange={(v) => patch('faq', { ...draft.faq, titulo: v })} />
+            <Field label="Título" value={draft.faq.titulo} onChange={(v) => patch('faq', { ...draft.faq, titulo: v })} />
             <ListEditor
               items={draft.faq.itens}
               onChange={(itens) => patch('faq', { ...draft.faq, itens })}
@@ -526,14 +526,14 @@ export default function SiteContentEditor() {
             />
           </Section>
 
-          <Section title="Chamada final e rodape">
-            <Field label="Titulo" value={draft.ctaFinal.titulo} rows={2} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, titulo: v })} />
+          <Section title="Chamada final e rodapé">
+            <Field label="Título" value={draft.ctaFinal.titulo} rows={2} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, titulo: v })} />
             <Field label="Texto" value={draft.ctaFinal.texto} rows={2} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, texto: v })} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Botao" value={draft.ctaFinal.botao} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, botao: v })} />
+              <Field label="Botão" value={draft.ctaFinal.botao} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, botao: v })} />
               <Field label="Linha de apoio" value={draft.ctaFinal.rodape} onChange={(v) => patch('ctaFinal', { ...draft.ctaFinal, rodape: v })} />
-              <Field label="Rodape — nome" value={draft.footer.nome} onChange={(v) => patch('footer', { ...draft.footer, nome: v })} />
-              <Field label="Rodape — subtitulo" value={draft.footer.subtitulo} onChange={(v) => patch('footer', { ...draft.footer, subtitulo: v })} />
+              <Field label="Rodapé — nome" value={draft.footer.nome} onChange={(v) => patch('footer', { ...draft.footer, nome: v })} />
+              <Field label="Rodapé — subtítulo" value={draft.footer.subtitulo} onChange={(v) => patch('footer', { ...draft.footer, subtitulo: v })} />
               <Field label="CREFITO" value={draft.footer.crefito} onChange={(v) => patch('footer', { ...draft.footer, crefito: v })} />
               <Field label="Copyright" value={draft.footer.copyright} onChange={(v) => patch('footer', { ...draft.footer, copyright: v })} />
             </div>
@@ -544,15 +544,15 @@ export default function SiteContentEditor() {
               <Field
                 label="WhatsApp"
                 value={draft.contato.whatsapp}
-                hint="Somente numeros, com pais e DDD. Ex.: 5561982087618"
+                hint="Somente números, com país e DDD. Ex.: 5561982087618"
                 onChange={(v) => patch('contato', { ...draft.contato, whatsapp: v })}
               />
               <Field label="Instagram" value={draft.contato.instagram} onChange={(v) => patch('contato', { ...draft.contato, instagram: v })} />
             </div>
-            <Field label="Titulo da aba (SEO)" value={draft.seo.titulo} onChange={(v) => patch('seo', { ...draft.seo, titulo: v })} />
-            <Field label="Descricao (SEO)" value={draft.seo.descricao} rows={3} onChange={(v) => patch('seo', { ...draft.seo, descricao: v })} />
-            <Field label="Titulo ao compartilhar" value={draft.seo.ogTitulo} onChange={(v) => patch('seo', { ...draft.seo, ogTitulo: v })} />
-            <Field label="Descricao ao compartilhar" value={draft.seo.ogDescricao} rows={2} onChange={(v) => patch('seo', { ...draft.seo, ogDescricao: v })} />
+            <Field label="Título da aba (SEO)" value={draft.seo.titulo} onChange={(v) => patch('seo', { ...draft.seo, titulo: v })} />
+            <Field label="Descrição (SEO)" value={draft.seo.descricao} rows={3} onChange={(v) => patch('seo', { ...draft.seo, descricao: v })} />
+            <Field label="Título ao compartilhar" value={draft.seo.ogTitulo} onChange={(v) => patch('seo', { ...draft.seo, ogTitulo: v })} />
+            <Field label="Descrição ao compartilhar" value={draft.seo.ogDescricao} rows={2} onChange={(v) => patch('seo', { ...draft.seo, ogDescricao: v })} />
           </Section>
 
           <Section title="Imagens" description="Envie fotos reais para substituir as imagens atuais.">

@@ -66,7 +66,7 @@ function normalizeMembership(id: string, data: any, firebaseUser: FirebaseUser):
     whitelabelName: data.whitelabelName,
     userId: data.userId ?? firebaseUser.uid,
     email: data.email ?? firebaseUser.email ?? '',
-    name: data.name ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Usuario',
+    name: data.name ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Usuário',
     roles,
     status,
     invitationToken: data.invitationToken,
@@ -249,7 +249,7 @@ async function buildUser(firebaseUser: FirebaseUser): Promise<User> {
 
   return {
     id: firebaseUser.uid,
-    name: profile?.name ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Usuario',
+    name: profile?.name ?? firebaseUser.displayName ?? firebaseUser.email?.split('@')[0] ?? 'Usuário',
     email: firebaseUser.email ?? '',
     roles,
     activeRole: initialRole,

@@ -24,7 +24,7 @@ const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
 ];
 
 const FAIXA_LABEL: Record<string, string> = {
-  '0-1m': '0 a 1 mes',
+  '0-1m': '0 a 1 mês',
   '1-3m': '1 a 3 meses',
   '3-6m': '3 a 6 meses',
   '6-12m': '6 a 12 meses',
@@ -33,10 +33,10 @@ const FAIXA_LABEL: Record<string, string> = {
 };
 
 const PERIODO_LABEL: Record<string, string> = {
-  MANHA: 'Manha',
+  MANHA: 'Manhã',
   TARDE: 'Tarde',
   NOITE: 'Noite',
-  QUALQUER: 'Qualquer horario',
+  QUALQUER: 'Qualquer horário',
 };
 
 function onlyDigits(value: string) {
@@ -84,7 +84,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Nao foi possivel salvar. Tente novamente.');
+      setError('Não foi possível salvar. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -94,7 +94,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     if (!lead.id) return;
     if (
       arquivar &&
-      !window.confirm(`Arquivar a solicitacao de ${lead.responsavel}? Ela some das listas e pode ser restaurada em "Arquivadas".`)
+      !window.confirm(`Arquivar a solicitação de ${lead.responsavel}? Ela some das listas e pode ser restaurada em "Arquivadas".`)
     ) {
       return;
     }
@@ -105,7 +105,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
       onClose();
     } catch (err) {
       console.error(err);
-      setError(arquivar ? 'Nao foi possivel arquivar. Tente novamente.' : 'Nao foi possivel restaurar. Tente novamente.');
+      setError(arquivar ? 'Não foi possível arquivar. Tente novamente.' : 'Não foi possível restaurar. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -115,7 +115,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
     if (!lead.id) return;
     if (
       !window.confirm(
-        `Excluir DEFINITIVAMENTE a solicitacao de ${lead.responsavel}? Isso apaga os dados e nao pode ser desfeito.`
+        `Excluir DEFINITIVAMENTE a solicitação de ${lead.responsavel}? Isso apaga os dados e não pode ser desfeito.`
       )
     ) {
       return;
@@ -127,7 +127,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Nao foi possivel excluir. Verifique suas permissoes.');
+      setError('Não foi possível excluir. Verifique suas permissões.');
     } finally {
       setSaving(false);
     }
@@ -153,14 +153,14 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
         setConvertidoAgora(true);
         setShowConvert(false);
         setAvisoAnamnese(
-          'Paciente criado, mas nao foi possivel preencher a anamnese. Copie o texto abaixo e cole em Antecedentes Pessoais, na anamnese do paciente.'
+          'Paciente criado, mas não foi possível preencher a anamnese. Copie o texto abaixo e cole em Antecedentes Pessoais, na anamnese do paciente.'
         );
         return;
       }
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Nao foi possivel converter em paciente. Tente novamente.');
+      setError('Não foi possível converter em paciente. Tente novamente.');
     } finally {
       setSaving(false);
     }
@@ -197,13 +197,13 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
               <dd className="text-slate-900 dark:text-slate-100 mt-0.5">{lead.whatsapp}</dd>
             </div>
             <div>
-              <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Bebe</dt>
+              <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Bebê</dt>
               <dd className="text-slate-900 dark:text-slate-100 mt-0.5">
-                {lead.bebeNome || 'Nao informado'} · {FAIXA_LABEL[lead.bebeIdadeFaixa] ?? lead.bebeIdadeFaixa}
+                {lead.bebeNome || 'Não informado'} · {FAIXA_LABEL[lead.bebeIdadeFaixa] ?? lead.bebeIdadeFaixa}
               </dd>
             </div>
             <div className="sm:col-span-2">
-              <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Preocupacoes</dt>
+              <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Preocupações</dt>
               <dd className="flex flex-wrap gap-1.5 mt-1.5">
                 {lead.preocupacoes.map((item) => (
                   <span
@@ -217,16 +217,16 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             </div>
             {lead.arquivado && (
               <div className="sm:col-span-2">
-                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Situacao</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Situação</dt>
                 <dd className="text-slate-600 dark:text-slate-300 mt-0.5 font-semibold">
-                  Arquivada — nao aparece nas listas. Restaure para voltar.
+                  Arquivada — não aparece nas listas. Restaure para voltar.
                 </dd>
               </div>
             )}
             {lead.prioritario && (
               <div className="sm:col-span-2">
                 <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Prioridade</dt>
-                <dd className="text-amber-600 dark:text-amber-400 mt-0.5 font-semibold">Prioritario na lista de espera</dd>
+                <dd className="text-amber-600 dark:text-amber-400 mt-0.5 font-semibold">Prioritário na lista de espera</dd>
               </div>
             )}
             {lead.outroMotivo && (
@@ -237,13 +237,13 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             )}
             {lead.endereco && (
               <div className="sm:col-span-2">
-                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Endereco</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Endereço</dt>
                 <dd className="text-slate-900 dark:text-slate-100 mt-0.5">{formatarEndereco(lead.endereco)}</dd>
               </div>
             )}
             {lead.periodoContato && (
               <div>
-                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Melhor periodo</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Melhor período</dt>
                 <dd className="text-slate-900 dark:text-slate-100 mt-0.5">
                   {PERIODO_LABEL[lead.periodoContato] ?? lead.periodoContato}
                 </dd>
@@ -251,7 +251,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
             )}
             {lead.observacoes && (
               <div className="sm:col-span-2">
-                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Gestacao e parto</dt>
+                <dt className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">Gestação e parto</dt>
                 <dd className="text-slate-900 dark:text-slate-100 mt-0.5 whitespace-pre-wrap">{lead.observacoes}</dd>
               </div>
             )}
@@ -298,7 +298,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 rows={3}
                 maxLength={2000}
                 className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
-                placeholder="Registro interno do contato. Nao aparece para o paciente."
+                placeholder="Registro interno do contato. Não aparece para o paciente."
               />
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
           {jaConvertido ? (
             <div className="space-y-3">
               <p className="rounded-lg bg-emerald-50 dark:bg-emerald-950/40 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-400">
-                Ja convertido em paciente.
+                Já convertido em paciente.
               </p>
               {avisoAnamnese && (
                 <div className="rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-3 space-y-2">
@@ -324,8 +324,8 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
           ) : showConvert ? (
             <div className="border-t border-slate-200 dark:border-slate-800 pt-5 space-y-3">
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Confira os dados antes de criar o paciente. Nome da mae e endereco vem do formulario
-                (edite se quem preencheu foi o pai). CPF e nascimento nao vem do formulario e podem
+                Confira os dados antes de criar o paciente. Nome da mãe e endereço vem do formulário
+                (edite se quem preencheu foi o pai). CPF e nascimento não vem do formulário e podem
                 ser preenchidos agora ou depois no cadastro.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -344,7 +344,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 <input
                   value={patientDraft.motherName ?? ''}
                   onChange={(e) => setPatientDraft({ ...patientDraft, motherName: e.target.value })}
-                  placeholder="Nome da mae"
+                  placeholder="Nome da mãe"
                   className="rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
                 />
                 <input
@@ -356,7 +356,7 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                 <input
                   value={patientDraft.address}
                   onChange={(e) => setPatientDraft({ ...patientDraft, address: e.target.value })}
-                  placeholder="Endereco"
+                  placeholder="Endereço"
                   className="sm:col-span-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
                 />
               </div>
@@ -369,15 +369,15 @@ export default function LeadDetailModal({ lead, onClose }: LeadDetailModalProps)
                     value={antecedentes}
                     onChange={(e) => setAntecedentes(e.target.value)}
                     rows={5}
-                    placeholder="Vazio: a anamnese nao e criada agora."
+                    placeholder="Vazio: a anamnese não é criada agora."
                     className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 focus:border-primary focus:outline-none"
                   />
                 </label>
               ) : (
                 antecedentes && (
                   <p className="rounded-lg bg-slate-100 dark:bg-slate-800 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
-                    O relato de gestacao e parto e as preocupacoes informadas no site permanecem nesta
-                    solicitacao. Um gestor ou terapeuta pode copia-los para a anamnese.
+                    O relato de gestação e parto e as preocupações informadas no site permanecem nesta
+                    solicitação. Um gestor ou terapeuta pode copiá-los para a anamnese.
                   </p>
                 )
               )}

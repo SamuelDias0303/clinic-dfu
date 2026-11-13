@@ -163,7 +163,7 @@ export default function BackofficeView() {
     return (
       <TenantAccessState
         title="Acesso restrito"
-        message="A gestao de membros esta disponivel apenas para administradores globais e gestores da whitelabel."
+        message="A gestão de membros está disponível apenas para administradores globais e gestores da whitelabel."
       />
     );
   }
@@ -171,7 +171,7 @@ export default function BackofficeView() {
   if (isGestor && !activeMembership) {
     return (
       <TenantAccessState
-        title="Whitelabel nao selecionada"
+        title="Whitelabel não selecionada"
         message="Selecione uma whitelabel ativa antes de gerenciar convites e membros."
       />
     );
@@ -182,11 +182,11 @@ export default function BackofficeView() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div className="min-w-0">
           <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {isAdminGlobal ? 'Administracao Global' : 'Gestao da Whitelabel'}
+            {isAdminGlobal ? 'Administração Global' : 'Gestão da Whitelabel'}
           </h2>
           <p className="text-slate-500 dark:text-slate-400 text-xs lg:text-sm mt-1 font-medium">
             {isAdminGlobal
-              ? 'Gestao de whitelabels, dominios, membros e configuracoes operacionais.'
+              ? 'Gestão de whitelabels, domínios, membros e configurações operacionais.'
               : 'Convites e membros vinculados somente ao ambiente ativo.'}
           </p>
         </div>
@@ -245,11 +245,11 @@ export default function BackofficeView() {
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-slate-400 font-bold bg-slate-50/50 dark:bg-slate-800/50">
                 <th className="px-6 py-3">Whitelabel</th>
-                <th className="px-6 py-3">Dominio</th>
+                <th className="px-6 py-3">Domínio</th>
                 <th className="px-6 py-3">Plano</th>
                 <th className="px-6 py-3">Marca</th>
                 <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3 text-right">Acoes</th>
+                <th className="px-6 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -275,7 +275,7 @@ export default function BackofficeView() {
                     <td className="px-6 py-4 text-sm text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-2 min-w-0">
                         <Globe size={14} className="text-slate-400" />
-                        <span className="truncate">{whitelabel.domain || 'Sem dominio'}</span>
+                        <span className="truncate">{whitelabel.domain || 'Sem domínio'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -391,8 +391,8 @@ export default function BackofficeView() {
 
                 <div className="grid grid-cols-1 gap-2 text-xs">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-bold uppercase text-slate-400">Dominio</span>
-                    <span className="truncate text-right font-medium text-slate-700 dark:text-slate-300">{whitelabel.domain || 'Sem dominio'}</span>
+                    <span className="font-bold uppercase text-slate-400">Domínio</span>
+                    <span className="truncate text-right font-medium text-slate-700 dark:text-slate-300">{whitelabel.domain || 'Sem domínio'}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <span className="font-bold uppercase text-slate-400">Plano</span>

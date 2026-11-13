@@ -5,7 +5,7 @@ import { Bot, CheckCircle2, ExternalLink, FileText, GitBranch, Network } from 'l
 const resources = [
   {
     name: 'Graphify',
-    description: 'Gera um grafo navegavel do codigo e ajuda a responder perguntas amplas sobre arquitetura.',
+    description: 'Gera um grafo navegável do código e ajuda a responder perguntas amplas sobre arquitetura.',
     local: 'npm run graphify',
     status: 'Script local configurado',
     href: 'https://github.com/safishamsi/graphify',
@@ -13,7 +13,7 @@ const resources = [
   },
   {
     name: 'Awesome Design MD',
-    description: 'Padrao de DESIGN.md adaptado para manter a UI clinica consistente.',
+    description: 'Padrão de DESIGN.md adaptado para manter a UI clínica consistente.',
     local: 'DESIGN.md',
     status: 'Contrato visual criado',
     href: 'https://github.com/voltagent/awesome-design-md',
@@ -21,7 +21,7 @@ const resources = [
   },
   {
     name: 'Get Shit Done',
-    description: 'Fluxo leve de planejamento por requisitos, roadmap, estado e verificacao.',
+    description: 'Fluxo leve de planejamento por requisitos, roadmap, estado e verificação.',
     local: '.planning/',
     status: 'GSD-lite versionado',
     href: 'https://github.com/gsd-build/get-shit-done',
@@ -29,7 +29,7 @@ const resources = [
   },
   {
     name: 'Everything Claude Code / ECC',
-    description: 'Boas praticas de agentes: pesquisa primeiro, contexto enxuto, verificacao e seguranca.',
+    description: 'Boas práticas de agentes: pesquisa primeiro, contexto enxuto, verificação e segurança.',
     local: 'AGENTS.md',
     status: 'Guia de agente criado',
     href: 'https://github.com/affaan-m/everything-claude-code',
@@ -54,7 +54,7 @@ export default function AiResourcesView() {
           className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
         >
           <ExternalLink size={16} />
-          Referencias
+          Referências
         </a>
       </div>
 

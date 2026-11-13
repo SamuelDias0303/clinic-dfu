@@ -23,11 +23,11 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
   const attemptedCurrentUserActivation = useRef(false);
 
   const validateForm = () => {
-    if (!invite) return 'Convite nao carregado.';
-    if (invite.status !== 'PENDENTE') return 'Convite nao esta pendente.';
+    if (!invite) return 'Convite não carregado.';
+    if (invite.status !== 'PENDENTE') return 'Convite não está pendente.';
     if (!name.trim()) return 'Informe o nome para ativar a conta.';
     if (password.length < 6) return 'A senha deve ter pelo menos 6 caracteres.';
-    if (password !== confirmPassword) return 'As senhas nao conferem.';
+    if (password !== confirmPassword) return 'As senhas não conferem.';
     return null;
   };
 
@@ -43,7 +43,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
         if (!mounted) return;
 
         if (!data || data.status !== 'PENDENTE') {
-          setError('Convite nao encontrado ou ja utilizado.');
+          setError('Convite não encontrado ou já utilizado.');
           setInvite(null);
           return;
         }
@@ -52,7 +52,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
         setName(data.name);
       } catch (loadError) {
         console.error('Error loading invite:', loadError);
-        if (mounted) setError('Nao foi possivel carregar o convite.');
+        if (mounted) setError('Não foi possível carregar o convite.');
       } finally {
         if (mounted) setLoading(false);
       }
@@ -99,9 +99,9 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
     } catch (acceptError: any) {
       console.error('Error accepting invite:', acceptError);
       if (acceptError.code === 'auth/email-already-in-use') {
-        setError('Este e-mail ja possui conta. Entre normalmente com e-mail e senha ou use recuperacao de senha.');
+        setError('Este e-mail já possui conta. Entre normalmente com e-mail e senha ou use recuperação de senha.');
       } else {
-        setError(acceptError.message || 'Nao foi possivel ativar a conta.');
+        setError(acceptError.message || 'Não foi possível ativar a conta.');
       }
     } finally {
       setSaving(false);
@@ -112,7 +112,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
     if (!invite || !auth.currentUser) return;
 
     if (auth.currentUser.email?.toLowerCase() !== invite.email.toLowerCase()) {
-      setError('A conta logada nao corresponde ao e-mail do convite.');
+      setError('A conta logada não corresponde ao e-mail do convite.');
       return;
     }
 
@@ -128,7 +128,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
       setSuccess(true);
     } catch (activateError: any) {
       console.error('Error activating current user:', activateError);
-      setError(activateError.message || 'Nao foi possivel ativar o convite com a conta atual.');
+      setError(activateError.message || 'Não foi possível ativar o convite com a conta atual.');
     } finally {
       setSaving(false);
     }
@@ -147,7 +147,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
           </div>
           <h1 className="text-xl font-bold text-slate-900 dark:text-white">Ativar acesso</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            {invite ? `${invite.whitelabelName} convidou voce para acessar a plataforma.` : 'Validando convite de acesso.'}
+            {invite ? `${invite.whitelabelName} convidou você para acessar a plataforma.` : 'Validando convite de acesso.'}
           </p>
         </div>
 
@@ -161,7 +161,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">Conta ativada</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                Seu acesso foi criado. Voce ja pode entrar na aplicacao.
+                Seu acesso foi criado. Você já pode entrar na aplicação.
               </p>
             </div>
             <button
@@ -262,7 +262,7 @@ export default function InviteAcceptanceView({ token, onFinished }: InviteAccept
                 onClick={handleActivateCurrentUser}
                 className="w-full border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all disabled:opacity-50"
               >
-                Ativar com conta ja logada
+                Ativar com conta já logada
               </button>
             )}
           </form>

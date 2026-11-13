@@ -15,7 +15,7 @@ export function scopedCollection(collectionName: TenantCollection, whitelabelId?
   }
 
   if (!whitelabelId) {
-    throw new Error('whitelabelId e obrigatorio para acessar colecoes isoladas por whitelabel.');
+    throw new Error('whitelabelId é obrigatório para acessar coleções isoladas por whitelabel.');
   }
 
   return collection(db, tenantCollectionPath(whitelabelId, collectionName));
@@ -27,7 +27,7 @@ export function scopedDoc(collectionName: TenantCollection, id: string, whitelab
   }
 
   if (!whitelabelId) {
-    throw new Error('whitelabelId e obrigatorio para acessar documentos isolados por whitelabel.');
+    throw new Error('whitelabelId é obrigatório para acessar documentos isolados por whitelabel.');
   }
 
   return doc(db, tenantCollectionPath(whitelabelId, collectionName), id);

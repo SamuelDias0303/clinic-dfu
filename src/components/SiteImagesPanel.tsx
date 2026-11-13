@@ -5,12 +5,12 @@ import { siteContentService } from '../services/siteContentService';
 import { useAuth } from '../contexts/AuthContext';
 
 const SLOT_LABEL: Record<SiteImageSlot, string> = {
-  hero: 'Topo da pagina',
-  terapia: 'Metodo De Setti',
+  hero: 'Topo da página',
+  terapia: 'Método De Setti',
   assimetria: 'Card de assimetria craniana',
-  torcicolo: 'Card de torcicolo congenito',
+  torcicolo: 'Card de torcicolo congênito',
   bebeSorrindo: 'Como funciona',
-  recemNascido: 'Sinais de atencao',
+  recemNascido: 'Sinais de atenção',
   raiza: 'Foto da profissional',
 };
 
@@ -66,13 +66,13 @@ export default function SiteImagesPanel({ images, onChange }: SiteImagesPanelPro
 
       {STORAGE_ENABLED ? (
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Prefira fotos claras, com luz natural. Ate 5 MB, em JPEG, PNG, WebP ou AVIF. O texto
+          Prefira fotos claras, com luz natural. Até 5 MB, em JPEG, PNG, WebP ou AVIF. O texto
           alternativo descreve a imagem para leitores de tela e para o Google.
         </p>
       ) : (
         <p className="rounded-lg bg-amber-50 dark:bg-amber-950/40 px-3 py-2 text-xs text-amber-800 dark:text-amber-400">
-          Envio de imagem indisponivel: o Cloud Storage ainda nao foi ativado neste projeto. A troca de
-          fotos acontece pelo repositorio da landing page. O texto alternativo abaixo continua editavel.
+          Envio de imagem indisponível: o Cloud Storage ainda não foi ativado neste projeto. A troca de
+          fotos acontece pelo repositório da landing page. O texto alternativo abaixo continua editável.
         </p>
       )}
 

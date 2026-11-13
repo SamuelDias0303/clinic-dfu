@@ -139,8 +139,8 @@ export const leadService = {
             { motherName: ajuste.motherName, address: ajuste.address },
             whitelabelId
           );
-          if (gravado.motherName) feito.push('nome da mae');
-          if (gravado.address) feito.push('endereco');
+          if (gravado.motherName) feito.push('nome da mãe');
+          if (gravado.address) feito.push('endereço');
         }
         if (ajuste.antecedentes) {
           const situacao = await clinicalRecordService.preencherAntecedentes(
@@ -159,7 +159,7 @@ export const leadService = {
           pacienteNome: ajuste.pacienteNome,
           ok: false,
           feito,
-          erro: 'Nao foi possivel gravar (verifique as permissoes).',
+          erro: 'Não foi possível gravar (verifique as permissões).',
         });
       }
     }

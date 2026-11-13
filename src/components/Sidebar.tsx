@@ -29,8 +29,8 @@ export default function Sidebar({ activeView, onNavigate, role, isOpen, onClose 
     { id: 'AGENDA', icon: Calendar, label: 'Agenda', roles: ['GESTOR', 'REPCAO', 'TERAPEUTA'] },
     { id: 'PACIENTES', icon: Users, label: 'Pacientes', roles: ['GESTOR', 'REPCAO', 'TERAPEUTA'] },
     { id: 'TERAPEUTAS', icon: UserRound, label: 'Terapeutas', roles: ['GESTOR'] },
-    { id: 'CAPTACAO', icon: Inbox, label: 'Captacao', roles: ['ADMIN_GLOBAL', 'GESTOR', 'REPCAO'] },
-    { id: 'BACKOFFICE', icon: ShieldCheck, label: role === 'GESTOR' ? 'Gestao' : 'Backoffice', roles: ['ADMIN_GLOBAL', 'GESTOR'] },
+    { id: 'CAPTACAO', icon: Inbox, label: 'Captação', roles: ['ADMIN_GLOBAL', 'GESTOR', 'REPCAO'] },
+    { id: 'BACKOFFICE', icon: ShieldCheck, label: role === 'GESTOR' ? 'Gestão' : 'Backoffice', roles: ['ADMIN_GLOBAL', 'GESTOR'] },
     { id: 'AI_RESOURCES', icon: Sparkles, label: 'Recursos IA', roles: ['ADMIN_GLOBAL'] },
   ];
 

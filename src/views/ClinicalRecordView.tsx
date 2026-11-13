@@ -239,20 +239,20 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
                 )}
                 {patient.motherName && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Mae:</label>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Mãe:</label>
                     <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.motherName}</p>
                   </div>
                 )}
                 {patient.homeLocationUrl && (
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Localizacao:</label>
+                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Localização:</label>
                     <a
                       href={patient.homeLocationUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="text-sm font-bold text-primary hover:text-primary/80 break-all"
                     >
-                      Abrir link da localizacao
+                      Abrir link da localização
                     </a>
                   </div>
                 )}
@@ -388,12 +388,12 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
 
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Diagnostico</label>
+                      <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Diagnóstico</label>
                       <textarea
                         value={anamneseForm.diagnosis}
                         onChange={e => setAnamneseForm({...anamneseForm, diagnosis: e.target.value})}
                         className="w-full p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm min-h-[100px] dark:text-white"
-                        placeholder="Informe - Diagnostico"
+                        placeholder="Informe - Diagnóstico"
                       />
                     </div>
                     <div>

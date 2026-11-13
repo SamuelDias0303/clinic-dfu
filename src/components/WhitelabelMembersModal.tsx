@@ -260,7 +260,7 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Papeis</label>
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Papéis</label>
               <div className="flex flex-wrap gap-2">
                 {roleOptions.map((role) => (
                   <button
@@ -294,7 +294,7 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
                 </select>
                 {therapistSpecialtyOptions.length === 0 && (
                   <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">
-                    Cadastre modalidades na configuracao da whitelabel para habilitar opcoes.
+                    Cadastre modalidades na configuração da whitelabel para habilitar opções.
                   </p>
                 )}
               </div>
@@ -329,7 +329,7 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
               <div className="mb-3">
                 <div className="text-sm font-bold text-slate-900 dark:text-white">Modalidades de terapeutas</div>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Separe por virgulas para liberar opcoes nos convites e perfis.
+                  Separe por vírgulas para liberar opções nos convites e perfis.
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -362,7 +362,7 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
                     type="button"
                     onClick={() => setEditingMember(null)}
                     className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700"
-                    title="Cancelar edicao"
+                    title="Cancelar edição"
                   >
                     <X size={16} />
                   </button>
@@ -370,7 +370,7 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Papeis</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Papéis</label>
                     <div className="flex flex-wrap gap-2">
                       {roleOptions.map((role) => (
                         <button
@@ -440,10 +440,10 @@ export default function WhitelabelMembersModal({ isOpen, onClose, whitelabel }: 
                   <thead>
                     <tr className="text-[10px] uppercase tracking-wider text-slate-400 font-bold">
                       <th className="py-2">Membro</th>
-                      <th className="py-2">Papeis</th>
+                      <th className="py-2">Papéis</th>
                       <th className="py-2">Modalidade</th>
                       <th className="py-2">Status</th>
-                      <th className="py-2 text-right">Acoes</th>
+                      <th className="py-2 text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

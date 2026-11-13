@@ -26,42 +26,42 @@ interface LoginViewProps {
 
 function getEmailPasswordAuthErrorMessage(error: any) {
   if (error?.code === 'auth/email-already-in-use') {
-    return 'Ja existe uma conta com este e-mail. Entre usando o metodo cadastrado originalmente.';
+    return 'Já existe uma conta com este e-mail. Entre usando o método cadastrado originalmente.';
   }
 
   if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/wrong-password') {
-    return 'E-mail ou senha invalidos. Confira os dados e tente novamente.';
+    return 'E-mail ou senha inválidos. Confira os dados e tente novamente.';
   }
 
   if (error?.code === 'auth/invalid-email') {
-    return 'Informe um e-mail valido para continuar.';
+    return 'Informe um e-mail válido para continuar.';
   }
 
   if (error?.code === 'auth/weak-password') {
     return 'A senha deve ter pelo menos 6 caracteres.';
   }
 
-  return error?.message || 'Ocorreu um erro na autenticacao.';
+  return error?.message || 'Ocorreu um erro na autenticação.';
 }
 
 function getGoogleAuthErrorMessage(error: any) {
   if (error?.code === 'auth/account-exists-with-different-credential') {
-    return 'Ja existe uma conta com este e-mail usando outro metodo de acesso. Entre com e-mail e senha para preservar o cadastro original.';
+    return 'Já existe uma conta com este e-mail usando outro método de acesso. Entre com e-mail e senha para preservar o cadastro original.';
   }
 
   if (error?.code === 'auth/credential-already-in-use') {
-    return 'Esta conta Google ja esta vinculada a outro acesso. Entre usando o metodo cadastrado originalmente.';
+    return 'Esta conta Google já está vinculada a outro acesso. Entre usando o método cadastrado originalmente.';
   }
 
   if (error?.code === 'auth/popup-closed-by-user') {
-    return 'Entrada com Google cancelada antes da conclusao.';
+    return 'Entrada com Google cancelada antes da conclusão.';
   }
 
   if (error?.code === 'auth/unauthorized-domain') {
-    return 'Este dominio nao esta autorizado no Firebase. Adicione os URLs da App nas configuracoes de dominios autorizados do Firebase.';
+    return 'Este domínio não está autorizado no Firebase. Adicione os URLs da App nas configurações de domínios autorizados do Firebase.';
   }
 
-  return `Erro ao entrar com o Google: ${error?.message || 'nao foi possivel concluir o acesso.'}`;
+  return `Erro ao entrar com o Google: ${error?.message || 'não foi possível concluir o acesso.'}`;
 }
 
 export default function LoginView({ onLogin, onForgotPassword }: LoginViewProps) {
@@ -130,7 +130,7 @@ export default function LoginView({ onLogin, onForgotPassword }: LoginViewProps)
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Clinic DFU</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 text-center">
-            {isSignUp ? 'Crie sua conta na plataforma terapeutica' : 'Bem-vindo de volta a sua plataforma terapeutica'}
+            {isSignUp ? 'Crie sua conta na plataforma terapêutica' : 'Bem-vindo de volta à sua plataforma terapêutica'}
           </p>
         </div>
 
@@ -239,7 +239,7 @@ export default function LoginView({ onLogin, onForgotPassword }: LoginViewProps)
             }}
             className="text-xs text-slate-600 dark:text-slate-400 font-medium"
           >
-            {isSignUp ? 'Ja tem uma conta? ' : 'Nao tem uma conta? '}
+            {isSignUp ? 'Já tem uma conta? ' : 'Não tem uma conta? '}
             <span className="text-primary font-bold hover:underline">
               {isSignUp ? 'Fazer login' : 'Criar agora'}
             </span>

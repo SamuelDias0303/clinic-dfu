@@ -53,7 +53,7 @@ export function montarAntecedentesPessoais(lead: Lead): string {
 export function montarRascunhoPaciente(lead: Lead): Omit<Patient, 'id' | 'createdAt'> {
   const responsavel = normalizarNome(lead.responsavel);
   return {
-    name: lead.bebeNome?.trim() || `Bebe de ${responsavel}`,
+    name: lead.bebeNome?.trim() || `Bebê de ${responsavel}`,
     cpf: '',
     birthDate: '',
     motherName: responsavel,

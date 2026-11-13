@@ -24,7 +24,7 @@ export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitel
     switch (r) {
       case 'ADMIN_GLOBAL': return 'Administrador Global';
       case 'GESTOR': return 'Gestor';
-      case 'REPCAO': return 'Recepcao';
+      case 'REPCAO': return 'Recepção';
       case 'TERAPEUTA': return 'Terapeuta';
       default: return r;
     }
@@ -64,7 +64,7 @@ export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitel
             <button
               onClick={onReturnToGlobalAdmin}
               className="hidden sm:flex items-center gap-1.5 text-[10px] lg:text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline transition-all"
-              title="Sair da simulacao e voltar ao painel de Admin Global"
+              title="Sair da simulação e voltar ao painel de Admin Global"
             >
               <ShieldCheck size={14} />
               Voltar ao Admin Global
@@ -97,7 +97,7 @@ export default function TopBar({ role, onLogout, onSwitchProfile, onSwitchWhitel
           
           <div className="flex items-center gap-2 lg:gap-3">
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[100px]">{user?.name || 'Usuario'}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-[100px]">{user?.name || 'Usuário'}</span>
               <span className="text-[9px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">{getRoleLabel(role)}</span>
             </div>
             <div className="size-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary text-xs font-bold shrink-0">

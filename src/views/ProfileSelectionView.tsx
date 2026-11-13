@@ -13,16 +13,16 @@ const roleConfig: Record<UserRole, { label: string; icon: any; color: string; de
     label: 'Administrador Global',
     icon: ShieldCheck,
     color: 'bg-purple-100 text-purple-700',
-    desc: 'Gestao de clientes, branding e dominios.',
+    desc: 'Gestão de clientes, branding e domínios.',
   },
   GESTOR: {
-    label: 'Gestor da Clinica',
+    label: 'Gestor da Clínica',
     icon: Users,
     color: 'bg-blue-100 text-blue-700',
-    desc: 'Gestao de unidades, terapeutas e pacientes.',
+    desc: 'Gestão de unidades, terapeutas e pacientes.',
   },
   REPCAO: {
-    label: 'Recepcao',
+    label: 'Recepção',
     icon: UserCircle,
     color: 'bg-emerald-100 text-emerald-700',
     desc: 'Agenda operacional e cadastros.',
@@ -31,7 +31,7 @@ const roleConfig: Record<UserRole, { label: string; icon: any; color: string; de
     label: 'Terapeuta',
     icon: UserRound,
     color: 'bg-amber-100 text-amber-700',
-    desc: 'Atendimentos e registros clinicos.',
+    desc: 'Atendimentos e registros clínicos.',
   },
 };
 

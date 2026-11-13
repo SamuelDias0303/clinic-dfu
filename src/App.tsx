@@ -140,8 +140,8 @@ function AppContent() {
   if (user.roles.length === 0) {
     return (
       <TenantAccessState
-        title="Acesso nao vinculado"
-        message="Sua conta nao possui convite ativo ou associacao com uma whitelabel. Solicite um novo convite ao administrador."
+        title="Acesso não vinculado"
+        message="Sua conta não possui convite ativo ou associação com uma whitelabel. Solicite um novo convite ao administrador."
         actionLabel="Sair"
         onAction={logout}
         variant="warning"
@@ -166,8 +166,8 @@ function AppContent() {
     if (user.roles.length === 1) {
       return (
         <TenantAccessState
-          title="Perfil nao selecionado"
-          message="Nao foi possivel ativar seu perfil automaticamente. Saia e entre novamente para recarregar suas permissoes."
+          title="Perfil não selecionado"
+          message="Não foi possível ativar seu perfil automaticamente. Saia e entre novamente para recarregar suas permissões."
           actionLabel="Sair"
           onAction={logout}
           variant="warning"
@@ -193,7 +193,7 @@ function AppContent() {
         return (
           <TenantAccessState
             title="Nenhum whitelabel ativo"
-            message="Sua conta nao possui associacao ativa com um whitelabel. Solicite acesso a um administrador global."
+            message="Sua conta não possui associação ativa com um whitelabel. Solicite acesso a um administrador global."
           />
         );
       }
@@ -202,7 +202,7 @@ function AppContent() {
         return (
           <TenantAccessState
             title="Selecione um whitelabel"
-            message="Escolha o ambiente de atendimento antes de acessar dados operacionais e clinicos."
+            message="Escolha o ambiente de atendimento antes de acessar dados operacionais e clínicos."
             actionLabel="Selecionar Whitelabel"
             onAction={() => setView('WHITELABEL_SELECTION')}
             variant="info"
@@ -221,8 +221,8 @@ function AppContent() {
       case 'CAPTACAO': return <CaptacaoView />;
       case 'CONFIGURACOES': return (
         <TenantAccessState
-          title="Configuracoes indisponiveis"
-          message="Esta area ainda nao esta habilitada para o perfil atual."
+          title="Configurações indisponíveis"
+          message="Esta área ainda não está habilitada para o perfil atual."
           variant="info"
         />
       );
@@ -231,8 +231,8 @@ function AppContent() {
       ) : <PatientListView onOpenProntuario={handleOpenProntuario} />;
       default: return (
         <TenantAccessState
-          title="Area indisponivel"
-          message="Selecione uma opcao valida no menu para continuar."
+          title="Área indisponível"
+          message="Selecione uma opção válida no menu para continuar."
           variant="info"
         />
       );

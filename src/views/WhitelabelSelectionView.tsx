@@ -29,7 +29,7 @@ export default function WhitelabelSelectionView({ memberships, onSelect }: White
             </div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white">Nenhum whitelabel ativo</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              Sua conta nao possui associacao ativa com um whitelabel. Solicite acesso a um administrador.
+              Sua conta não possui associação ativa com um whitelabel. Solicite acesso a um administrador.
             </p>
           </div>
         ) : (
@@ -57,7 +57,7 @@ export default function WhitelabelSelectionView({ memberships, onSelect }: White
                     {membership.whitelabelName || membership.whitelabelId}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Papeis: {membership.roles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}
+                    Papéis: {membership.roles.map((role) => ROLE_LABELS[role] ?? role).join(', ')}
                   </p>
                 </div>
               </motion.button>

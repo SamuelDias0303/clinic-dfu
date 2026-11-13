@@ -16,18 +16,18 @@ interface PasswordRecoveryViewProps {
   onBackToLogin: () => void;
 }
 
-const GENERIC_SUCCESS_MESSAGE = 'Se este e-mail estiver cadastrado, enviaremos um link de recuperacao de senha, verifique sua caixa de entrada, incluindo a pasta de spam.';
+const GENERIC_SUCCESS_MESSAGE = 'Se este e-mail estiver cadastrado, enviaremos um link de recuperação de senha, verifique sua caixa de entrada, incluindo a pasta de spam.';
 
 function getPasswordRecoveryError(error: any) {
   if (error?.code === 'auth/invalid-email') {
-    return 'Informe um e-mail valido para continuar.';
+    return 'Informe um e-mail válido para continuar.';
   }
 
   if (error?.code === 'auth/too-many-requests') {
     return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente novamente.';
   }
 
-  return 'Nao foi possivel processar a solicitacao agora. Tente novamente em instantes.';
+  return 'Não foi possível processar a solicitação agora. Tente novamente em instantes.';
 }
 
 export default function PasswordRecoveryView({ initialEmail = '', onBackToLogin }: PasswordRecoveryViewProps) {
@@ -44,7 +44,7 @@ export default function PasswordRecoveryView({ initialEmail = '', onBackToLogin 
     setSuccessMessage(null);
 
     if (!normalizedEmail) {
-      setError('Informe seu e-mail para receber as instrucoes de recuperacao.');
+      setError('Informe seu e-mail para receber as instruções de recuperação.');
       return;
     }
 
@@ -80,7 +80,7 @@ export default function PasswordRecoveryView({ initialEmail = '', onBackToLogin 
           </div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Recuperar senha</h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 text-center">
-            Informe seu e-mail para receber instrucoes de acesso.
+            Informe seu e-mail para receber instruções de acesso.
           </p>
         </div>
 
