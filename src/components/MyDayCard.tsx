@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, FileText, PenTool } from 'lucide-react';
+import { CalendarDays, CheckCircle2, FileText, Link2, PenTool } from 'lucide-react';
 import { Appointment } from '../types';
 import { needsEvolution } from '../lib/clinicalHelpers';
 
@@ -22,6 +22,7 @@ interface MyDayCardProps {
   onComplete: (appointment: Appointment) => void;
   onOpenProntuario: (appointment: Appointment) => void;
   onEvolve: (appointment: Appointment) => void;
+  onLinkExisting: (appointment: Appointment) => void;
   onViewAgenda: () => void;
 }
 
@@ -35,6 +36,7 @@ export default function MyDayCard({
   onComplete,
   onOpenProntuario,
   onEvolve,
+  onLinkExisting,
   onViewAgenda,
 }: MyDayCardProps) {
   const today = [...todayAppointments].sort((a, b) => a.time.localeCompare(b.time));
@@ -107,12 +109,18 @@ export default function MyDayCard({
                     {showTherapist && ` · ${appointment.therapistName}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1">
                   {canRecordEvolution && (
-                    <button onClick={() => onEvolve(appointment)} className={actionClass} title="Registrar evolução desta sessão">
-                      <PenTool size={14} />
-                      Evoluir
-                    </button>
+                    <>
+                      <button onClick={() => onEvolve(appointment)} className={actionClass} title="Registrar evolução desta sessão">
+                        <PenTool size={14} />
+                        Evoluir
+                      </button>
+                      <button onClick={() => onLinkExisting(appointment)} className={actionClass} title="Esta sessão já tem evolução escrita: vincular">
+                        <Link2 size={14} />
+                        Já registrada
+                      </button>
+                    </>
                   )}
                   <button onClick={() => onOpenProntuario(appointment)} className={actionClass} title="Abrir prontuário">
                     <FileText size={14} />

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import MyDayCard from '../components/MyDayCard';
+import LinkEvolutionModal from '../components/LinkEvolutionModal';
 import { needsEvolution } from '../lib/clinicalHelpers';
 import QuickStats from '../components/QuickStats';
 import AppointmentFormModal from '../components/AppointmentFormModal';
@@ -36,6 +37,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [linkingAppointment, setLinkingAppointment] = useState<Appointment | null>(null);
 
   useEffect(() => {
     const filterId = user?.activeRole === 'TERAPEUTA' ? user.email : undefined;
@@ -167,6 +169,7 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
               const patient = findPatient(appointment);
               if (patient) onOpenEvolution(patient, appointment);
             }}
+            onLinkExisting={setLinkingAppointment}
             onViewAgenda={onViewAgenda}
           />
         </div>
@@ -195,6 +198,13 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
         }}
       />
       </div>
+
+      <LinkEvolutionModal
+        appointment={linkingAppointment}
+        onClose={() => setLinkingAppointment(null)}
+        usedEvolutionIds={new Set(appointments.map(app => app.evolutionId).filter((id): id is string => !!id))}
+        whitelabelId={user?.activeWhitelabelId}
+      />
 
       <AppointmentFormModal
         isOpen={isModalOpen}
