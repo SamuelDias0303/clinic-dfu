@@ -126,6 +126,7 @@ export interface Evolution {
   id?: string;
   whitelabelId?: string;
   patientId: string;
+  appointmentId?: string;
   therapistId: string;
   therapistName: string;
   date: string;

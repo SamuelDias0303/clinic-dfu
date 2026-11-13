@@ -7,7 +7,8 @@ import {
   Plus
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
-import RecentActivityTable from '../components/RecentActivityTable';
+import MyDayCard from '../components/MyDayCard';
+import { needsEvolution } from '../lib/clinicalHelpers';
 import QuickStats from '../components/QuickStats';
 import AppointmentFormModal from '../components/AppointmentFormModal';
 import PackagesOverviewCard from '../components/PackagesOverviewCard';
@@ -23,15 +24,18 @@ const DAILY_APPOINTMENT_CAPACITY = 14;
 interface DashboardViewProps {
   onOpenProntuario: (patient: Patient) => void;
   onOpenAgenda: (patient: Patient) => void;
+  onOpenEvolution: (patient: Patient, appointment: Appointment) => void;
+  onViewAgenda: () => void;
 }
 
-export default function DashboardView({ onOpenProntuario, onOpenAgenda }: DashboardViewProps) {
+export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEvolution, onViewAgenda }: DashboardViewProps) {
   const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     const filterId = user?.activeRole === 'TERAPEUTA' ? user.email : undefined;
@@ -60,7 +64,28 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda }: Dashbo
 
   const todayAppointments = appointments.filter(app => app.date === todayStr);
   const activePatients = patients.filter(patient => patient.status === 'Ativo').length;
-  const pendingReports = appointments.filter(app => app.status === 'CONCLUÍDO' && !app.clinicalEvolution).length;
+  const pendingAll = appointments.filter(needsEvolution);
+  const pendingReports = pendingAll.length;
+  // Hoje as pendências já aparecem na lista do dia; aqui entram só dias anteriores, mais recentes primeiro.
+  const pendingBefore = pendingAll
+    .filter(app => app.date !== todayStr)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
+  const canRecordEvolution = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR' || user?.activeRole === 'TERAPEUTA';
+
+  const findPatient = (appointment: Appointment) => patients.find(patient => patient.id === appointment.patientId);
+
+  const handleComplete = async (appointment: Appointment) => {
+    if (!appointment.id) return;
+    setBusyId(appointment.id);
+    try {
+      await appointmentService.updateAppointment(appointment.id, { status: 'CONCLUÍDO' }, user?.activeWhitelabelId);
+    } catch (error) {
+      console.error('Error completing appointment:', error);
+      alert('Erro ao concluir a sessão.');
+    } finally {
+      setBusyId(null);
+    }
+  };
   const freeSlotsToday = Math.max(0, DAILY_APPOINTMENT_CAPACITY - todayAppointments.length);
   const utilizationToday = Math.min(100, Math.round((todayAppointments.length / DAILY_APPOINTMENT_CAPACITY) * 100));
 
@@ -125,7 +150,24 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda }: Dashbo
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         <div className="lg:col-span-2 min-w-0">
-          <RecentActivityTable appointments={todayAppointments} />
+          <MyDayCard
+            todayAppointments={todayAppointments}
+            pendingEvolutions={pendingBefore.slice(0, 8)}
+            pendingTotal={pendingBefore.length}
+            showTherapist={user?.activeRole !== 'TERAPEUTA'}
+            canRecordEvolution={canRecordEvolution}
+            busyId={busyId}
+            onComplete={handleComplete}
+            onOpenProntuario={(appointment) => {
+              const patient = findPatient(appointment);
+              if (patient) onOpenProntuario(patient);
+            }}
+            onEvolve={(appointment) => {
+              const patient = findPatient(appointment);
+              if (patient) onOpenEvolution(patient, appointment);
+            }}
+            onViewAgenda={onViewAgenda}
+          />
         </div>
         <div className="min-w-0">
           <QuickStats

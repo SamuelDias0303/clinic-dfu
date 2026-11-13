@@ -12,28 +12,35 @@ import {
   Calendar,
   Clock,
   User,
-  Bell,
   MoreVertical,
   Pencil,
   Trash2,
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Patient, Evolution, Anamnese } from '../types';
+import { Patient, Evolution, Anamnese, Appointment } from '../types';
 import { clinicalRecordService } from '../services/clinicalRecordService';
+import { appointmentService } from '../services/appointmentService';
+import { formatAge } from '../lib/clinicalHelpers';
 import PatientPackagesCard from '../components/PatientPackagesCard';
 import { useAuth } from '../contexts/AuthContext';
 
 interface ClinicalRecordViewProps {
+  key?: React.Key;
   patient: Patient;
   onBack: () => void;
+  // Sessão para a qual se está registrando a evolução (vem do Painel): abre na aba EVOLUIR e vincula os dois.
+  appointment?: Appointment | null;
 }
 
 type Tab = 'HISTORICO' | 'ANAMNESE' | 'EVOLUIR' | 'GRAVACAO' | 'IMAGENS';
 
-export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordViewProps) {
+export default function ClinicalRecordView({ patient, onBack, appointment }: ClinicalRecordViewProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>('HISTORICO');
+  const [activeTab, setActiveTab] = useState<Tab>(appointment ? 'EVOLUIR' : 'HISTORICO');
+  const [linkedAppointment, setLinkedAppointment] = useState<Appointment | null>(appointment ?? null);
+  const [linkedEvolutionId, setLinkedEvolutionId] = useState<string | undefined>(undefined);
+  const age = formatAge(patient.birthDate);
   const [evolutions, setEvolutions] = useState<Evolution[]>([]);
   const [anamnese, setAnamnese] = useState<Anamnese | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,19 +116,36 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
 
     setSaving(true);
     try {
-      const now = new Date();
-      await clinicalRecordService.createEvolution({
-        patientId: patient.id,
-        therapistId: user.email,
-        therapistName: user.name,
-        date: now.toLocaleDateString('pt-BR'),
-        time: now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        type: 'SESSÃO DE ATENDIMENTO',
-        content: currentEvolution,
-        status
-      }, user.activeWhitelabelId);
-      setCurrentEvolution('');
+      if (linkedEvolutionId) {
+        // Rascunho já salvo para esta sessão: atualiza em vez de criar outra evolução.
+        await clinicalRecordService.updateEvolution(linkedEvolutionId, { content: currentEvolution, status }, user.activeWhitelabelId);
+      } else {
+        const now = new Date();
+        const [year, month, day] = linkedAppointment ? linkedAppointment.date.split('-') : [];
+        const created = await clinicalRecordService.createEvolution({
+          patientId: patient.id,
+          therapistId: linkedAppointment?.therapistId ?? user.email,
+          therapistName: linkedAppointment?.therapistName ?? user.name,
+          date: linkedAppointment ? `${day}/${month}/${year}` : now.toLocaleDateString('pt-BR'),
+          time: linkedAppointment?.time ?? now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+          type: linkedAppointment?.type ?? 'SESSÃO DE ATENDIMENTO',
+          content: currentEvolution,
+          status,
+          ...(linkedAppointment?.id ? { appointmentId: linkedAppointment.id } : {}),
+        }, user.activeWhitelabelId);
+
+        if (linkedAppointment?.id) {
+          setLinkedEvolutionId(created.id);
+          await appointmentService.updateAppointment(linkedAppointment.id, { evolutionId: created.id }, user.activeWhitelabelId);
+        }
+      }
+
+      if (!linkedAppointment || status === 'FINALIZED') {
+        setCurrentEvolution('');
+      }
       if (status === 'FINALIZED') {
+        setLinkedAppointment(null);
+        setLinkedEvolutionId(undefined);
         setActiveTab('HISTORICO');
       }
       alert(status === 'FINALIZED' ? 'Evolução finalizada!' : 'Rascunho salvo!');
@@ -194,10 +218,6 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
           </button>
           <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Prontuário</h2>
         </div>
-        <button className="p-2 text-slate-400 hover:text-primary transition-colors relative">
-          <Bell size={20} />
-          <span className="absolute top-2 right-2 size-2 bg-rose-500 rounded-full border-2 border-white dark:border-slate-900" />
-        </button>
       </div>
 
       {/* Patient Info Card */}
@@ -214,7 +234,10 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
               <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 mt-6">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Data de Nascimento:</label>
-                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.birthDate}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {patient.birthDate}
+                    {age && <span className="ml-2 font-medium text-slate-500 dark:text-slate-400">({age})</span>}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Telefone:</label>
@@ -458,7 +481,12 @@ export default function ClinicalRecordView({ patient, onBack }: ClinicalRecordVi
                   exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
-                  <textarea 
+                  {linkedAppointment && (
+                    <p className="rounded-xl bg-primary/5 px-4 py-3 text-sm font-medium text-slate-700 dark:bg-primary/10 dark:text-slate-200">
+                      Evolução da sessão de {linkedAppointment.date.split('-').reverse().join('/')} às {linkedAppointment.time} ({linkedAppointment.type}).
+                    </p>
+                  )}
+                  <textarea
                     value={currentEvolution}
                     onChange={e => setCurrentEvolution(e.target.value)}
                     className="w-full p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm min-h-[250px] shadow-inner dark:text-white"

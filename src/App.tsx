@@ -15,7 +15,7 @@ import BackofficeView from './views/BackofficeView';
 import ClinicalRecordView from './views/ClinicalRecordView';
 import AiResourcesView from './views/AiResourcesView';
 import CaptacaoView from './views/CaptacaoView';
-import { UserRole, View, Patient } from './types';
+import { UserRole, View, Patient, Appointment } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { Loader2 } from 'lucide-react';
@@ -31,6 +31,7 @@ function AppContent() {
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [prontuarioBack, setProntuarioBack] = useState<View>('PACIENTES');
   const [agendaPatient, setAgendaPatient] = useState<Patient | null>(null);
+  const [evolutionAppointment, setEvolutionAppointment] = useState<Appointment | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [passwordRecoveryEmail, setPasswordRecoveryEmail] = useState('');
   const inviteToken = new URLSearchParams(window.location.search).get('invite');
@@ -107,6 +108,15 @@ function AppContent() {
   const handleOpenProntuario = (patient: Patient, back: View = 'PACIENTES') => {
     setSelectedPatient(patient);
     setProntuarioBack(back);
+    setEvolutionAppointment(null);
+    setView('PRONTUARIO');
+  };
+
+  // Prontuário aberto já na aba EVOLUIR, para registrar a evolução de uma sessão específica.
+  const handleOpenEvolution = (patient: Patient, appointment: Appointment) => {
+    setSelectedPatient(patient);
+    setProntuarioBack('DASHBOARD');
+    setEvolutionAppointment(appointment);
     setView('PRONTUARIO');
   };
 
@@ -230,6 +240,8 @@ function AppContent() {
         <DashboardView
           onOpenProntuario={(patient) => handleOpenProntuario(patient, 'DASHBOARD')}
           onOpenAgenda={handleOpenAgenda}
+          onOpenEvolution={handleOpenEvolution}
+          onViewAgenda={() => handleNavigate('AGENDA')}
         />
       );
       case 'PACIENTES': return <PatientListView onOpenProntuario={handleOpenProntuario} />;
@@ -252,7 +264,12 @@ function AppContent() {
         />
       );
       case 'PRONTUARIO': return selectedPatient ? (
-        <ClinicalRecordView patient={selectedPatient} onBack={() => setView(prontuarioBack)} />
+        <ClinicalRecordView
+          key={`${selectedPatient.id}-${evolutionAppointment?.id ?? ''}`}
+          patient={selectedPatient}
+          appointment={evolutionAppointment}
+          onBack={() => setView(prontuarioBack)}
+        />
       ) : <PatientListView onOpenProntuario={handleOpenProntuario} />;
       default: return (
         <TenantAccessState
