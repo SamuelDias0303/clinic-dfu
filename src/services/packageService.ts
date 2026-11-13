@@ -29,6 +29,19 @@ export const packageService = {
     });
   },
 
+  // Todos os pacotes do tenant (painel). Cabe ao chamador restringir por paciente visível.
+  subscribeToPackages(
+    callback: (packages: Package[]) => void,
+    whitelabelId?: string | null
+  ) {
+    return onSnapshot(scopedCollection(COLLECTIONS.packages, whitelabelId), (snapshot) => {
+      callback(snapshot.docs.map((item) => ({ ...item.data(), id: item.id })) as Package[]);
+    }, (error) => {
+      console.error('Error subscribing to packages:', error);
+      callback([]);
+    });
+  },
+
   subscribeToPatientPackages(
     patientId: string,
     callback: (packages: Package[]) => void,

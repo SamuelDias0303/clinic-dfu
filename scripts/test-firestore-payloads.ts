@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { toFirestoreData } from '../src/lib/firestoreData';
-import { packageProgress } from '../src/lib/packageProgress';
+import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
 
 const cleaned = toFirestoreData({
@@ -77,6 +77,36 @@ assert.equal(packageProgress({ totalSessions: 10, status: 'ENCERRADO' }, [{ stat
 
 // Reabrir uma sessão concluída devolve o saldo (contagem é derivada).
 assert.equal(packageProgress({ totalSessions: 3, status: 'ATIVO' }, [{ status: 'EM ANDAMENTO' }]).used, 0);
+
+// Visão geral para o painel: uma linha por pacote não encerrado, com terapeuta do paciente.
+const overviewPatients = [
+  { id: 'p1', name: 'Ana', therapistId: 't1', therapistName: 'Dra. Raiza' },
+  { id: 'p2', name: 'Bia', therapistId: 't2', therapistName: 'Dra. Rafaela' },
+  { id: 'p3', name: 'Caio' },
+];
+const overviewPackages = [
+  { id: 'k1', patientId: 'p1', totalSessions: 4, status: 'ATIVO' as const, createdBy: 'x' },
+  { id: 'k2', patientId: 'p2', totalSessions: 2, status: 'ATIVO' as const, createdBy: 'x' },
+  { id: 'k3', patientId: 'p1', totalSessions: 5, status: 'ENCERRADO' as const, createdBy: 'x' },
+  { id: 'k4', patientId: 'fora', totalSessions: 5, status: 'ATIVO' as const, createdBy: 'x' },
+  { id: 'k5', patientId: 'p3', totalSessions: 3, status: 'ATIVO' as const, createdBy: 'x' },
+];
+const overviewAppointments = [
+  { status: 'CONCLUÍDO' as const, packageId: 'k1' },
+  { status: 'CONCLUÍDO' as const, packageId: 'k2' },
+  { status: 'CONCLUÍDO' as const, packageId: 'k2' },
+  { status: 'CANCELADO' as const, packageId: 'k1' },
+  { status: 'CONCLUÍDO' as const },
+];
+const rows = packageOverview(overviewPackages, overviewPatients, overviewAppointments);
+// k3 encerrado e k4 sem paciente visível ficam de fora; abertos por saldo (empate: nome do paciente), completo (k2) no fim.
+assert.deepEqual(rows.map((row) => row.packageId), ['k1', 'k5', 'k2']);
+assert.deepEqual(
+  rows.map((row) => [row.used, row.total, row.remaining, row.complete]),
+  [[1, 4, 3, false], [0, 3, 3, false], [2, 2, 0, true]],
+);
+assert.equal(rows.find((row) => row.packageId === 'k1')?.therapistName, 'Dra. Raiza');
+assert.equal(rows.find((row) => row.packageId === 'k5')?.therapistName, 'Sem terapeuta');
 
 console.log('OK: payloads do Firestore sanitizados sem campos undefined.');
 console.log('OK: progresso de pacote conta so sessoes concluidas.');

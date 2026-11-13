@@ -10,10 +10,12 @@ import StatCard from '../components/StatCard';
 import RecentActivityTable from '../components/RecentActivityTable';
 import QuickStats from '../components/QuickStats';
 import AppointmentFormModal from '../components/AppointmentFormModal';
+import PackagesOverviewCard from '../components/PackagesOverviewCard';
 import { motion } from 'motion/react';
 import { patientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';
-import { Patient, Appointment } from '../types';
+import { packageService } from '../services/packageService';
+import { Patient, Appointment, Package } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 const DAILY_APPOINTMENT_CAPACITY = 14;
@@ -22,6 +24,7 @@ export default function DashboardView() {
   const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -38,9 +41,12 @@ export default function DashboardView() {
       setLoading(false);
     }, filterId, whitelabelId);
 
+    const unsubscribePackages = packageService.subscribeToPackages(setPackages, whitelabelId);
+
     return () => {
       unsubscribePatients();
       unsubscribeAppointments();
+      unsubscribePackages();
     };
   }, [user]);
 
@@ -124,6 +130,13 @@ export default function DashboardView() {
           />
         </div>
       </div>
+
+      <PackagesOverviewCard
+        packages={packages}
+        patients={patients}
+        appointments={appointments}
+        canFilterByTherapist={user?.activeRole !== 'TERAPEUTA'}
+      />
 
       <AppointmentFormModal
         isOpen={isModalOpen}
