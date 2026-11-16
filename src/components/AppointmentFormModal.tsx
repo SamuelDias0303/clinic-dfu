@@ -58,6 +58,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
   });
   const [patientPackages, setPatientPackages] = useState<PackageRecord[]>([]);
   const [packageAppointments, setPackageAppointments] = useState<Appointment[]>([]);
+  const autoLinkedPatient = useRef('');
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -81,6 +82,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
   }, [isOpen, user?.activeWhitelabelId]);
 
   useEffect(() => {
+    autoLinkedPatient.current = '';
     if (initialData) {
       const { id, createdAt, ...rest } = initialData;
       setFormData({ ...rest, recurrence: rest.recurrence || 'NONE' });
@@ -128,6 +130,16 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
   const packageOptions = patientPackages
     .map(pkg => ({ pkg, progress: packageProgress(pkg, packageAppointments.filter(item => item.packageId === pkg.id)) }))
     .filter(({ pkg, progress }) => progress.open || pkg.id === formData.packageId);
+  // Agendamento novo: vincula sozinho ao pacote aberto do paciente. Uma vez por paciente, para "Sem pacote" escolhido à mão não voltar.
+  // shortcut: contagem pode chegar depois do pacote e vincular a um pacote que acabou de completar; o aviso do formulário cobre, revisar se incomodar.
+  useEffect(() => {
+    if (!isOpen || initialData || !formData.patientId || autoLinkedPatient.current === formData.patientId) return;
+    const open = packageOptions.find(({ progress }) => progress.open);
+    if (!open) return;
+    autoLinkedPatient.current = formData.patientId;
+    setFormData(current => current.patientId === formData.patientId && !current.packageId ? { ...current, packageId: open.pkg.id! } : current);
+  }, [isOpen, initialData, formData.patientId, packageOptions]);
+
   const selectedPackage = packageOptions.find(({ pkg }) => pkg.id === formData.packageId);
   // shortcut: estimativa espelha os limites de buildRecurringAppointments (12 ocorrências, 6 se mensal, vezes os dias); revisar se aqueles limites mudarem.
   const recurrenceCount = formData.recurrence === 'NONE'
