@@ -22,6 +22,7 @@ import { Patient, Evolution, Anamnese, Appointment } from '../types';
 import { clinicalRecordService } from '../services/clinicalRecordService';
 import { appointmentService } from '../services/appointmentService';
 import { formatAge } from '../lib/clinicalHelpers';
+import { isForeignPatient } from '../lib/sharing';
 import PatientPackagesCard from '../components/PatientPackagesCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -41,6 +42,9 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
   const [linkedAppointment, setLinkedAppointment] = useState<Appointment | null>(appointment ?? null);
   const [linkedEvolutionId, setLinkedEvolutionId] = useState<string | undefined>(undefined);
   const age = formatAge(patient.birthDate);
+  // Prontuário (evolução e anamnese) fica no whitelabel de origem do paciente, mesmo quando compartilhado.
+  const isShared = !!user?.activeWhitelabelId && isForeignPatient(patient, user.activeWhitelabelId);
+  const ownerWhitelabelId = isShared ? patient.whitelabelId : user?.activeWhitelabelId;
   const [evolutions, setEvolutions] = useState<Evolution[]>([]);
   const [anamnese, setAnamnese] = useState<Anamnese | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,7 +73,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
     const unsubEvolutions = clinicalRecordService.subscribeToEvolutions(patient.id, (data) => {
       setEvolutions(data);
       setLoading(false);
-    }, user?.activeWhitelabelId);
+    }, ownerWhitelabelId);
 
     const unsubAnamnese = clinicalRecordService.subscribeToAnamnese(patient.id, (data) => {
       if (data) {
@@ -82,13 +86,13 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
           familyHistory: data.familyHistory || ''
         });
       }
-    }, user?.activeWhitelabelId);
+    }, ownerWhitelabelId);
 
     return () => {
       unsubEvolutions();
       unsubAnamnese();
     };
-  }, [patient.id, user?.activeWhitelabelId]);
+  }, [patient.id, ownerWhitelabelId]);
 
   const handleSaveAnamnese = async () => {
     if (!patient.id) return;
@@ -97,7 +101,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
       await clinicalRecordService.saveAnamnese({
         patientId: patient.id,
         ...anamneseForm
-      }, user?.activeWhitelabelId);
+      }, ownerWhitelabelId);
       alert('Anamnese salva com sucesso!');
     } catch (error) {
       console.error('Error saving anamnese:', error);
@@ -118,7 +122,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
     try {
       if (linkedEvolutionId) {
         // Rascunho já salvo para esta sessão: atualiza em vez de criar outra evolução.
-        await clinicalRecordService.updateEvolution(linkedEvolutionId, { content: currentEvolution, status }, user.activeWhitelabelId);
+        await clinicalRecordService.updateEvolution(linkedEvolutionId, { content: currentEvolution, status }, ownerWhitelabelId);
       } else {
         const now = new Date();
         const [year, month, day] = linkedAppointment ? linkedAppointment.date.split('-') : [];
@@ -132,7 +136,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
           content: currentEvolution,
           status,
           ...(linkedAppointment?.id ? { appointmentId: linkedAppointment.id } : {}),
-        }, user.activeWhitelabelId);
+        }, ownerWhitelabelId);
 
         if (linkedAppointment?.id) {
           setLinkedEvolutionId(created.id);
@@ -175,7 +179,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
     }
     setSaving(true);
     try {
-      await clinicalRecordService.updateEvolution(id, { content: editingContent }, user?.activeWhitelabelId);
+      await clinicalRecordService.updateEvolution(id, { content: editingContent }, ownerWhitelabelId);
       setEditingId(null);
       setEditingContent('');
     } catch (error) {
@@ -190,7 +194,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
     if (!window.confirm('Excluir esta evolução? Esta ação não pode ser desfeita.')) return;
     setSaving(true);
     try {
-      await clinicalRecordService.deleteEvolution(id, user?.activeWhitelabelId);
+      await clinicalRecordService.deleteEvolution(id, ownerWhitelabelId);
       if (editingId === id) handleCancelEdit();
     } catch (error) {
       console.error('Error deleting evolution:', error);
@@ -229,6 +233,9 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
             </div>
             <div className="flex-1">
               <h3 className="text-2xl font-bold text-primary uppercase">{patient.name}</h3>
+              {isShared && (
+                <span className="mt-1 inline-block rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">Paciente compartilhado</span>
+              )}
               {patient.cpf && <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">CPF: {patient.cpf}</p>}
 
               {/* Campo vazio não aparece: rótulo sem valor só polui o cadastro incompleto. */}

@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, MoreVertical, UserPlus, Trash2, Edit2, FileText, Users } from 'lucide-react';
+import { Search, Plus, Filter, MoreVertical, UserPlus, Trash2, Edit2, FileText, Share2, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Patient } from '../types';
+import { Patient, WhitelabelLinks } from '../types';
 import { patientService } from '../services/patientService';
+import { whitelabelLinksService } from '../services/whitelabelLinksService';
 import { therapistService, Therapist } from '../services/therapistService';
 import { useAuth } from '../contexts/AuthContext';
 import PatientFormModal from '../components/PatientFormModal';
 import ConfirmModal from '../components/ConfirmModal';
 import AssignTherapistModal from '../components/AssignTherapistModal';
+import SharePatientsModal from '../components/SharePatientsModal';
+import { allowedShareTargets, isForeignPatient } from '../lib/sharing';
+import { isLegacyWhitelabel } from '../services/serviceScope';
 import { isUnassigned } from '../lib/clinicalHelpers';
 
 export default function PatientListView({ onOpenProntuario }: { onOpenProntuario: (patient: Patient) => void }) {
@@ -22,6 +26,14 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   const [editingPatient, setEditingPatient] = useState<Patient | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [sharedPatients, setSharedPatients] = useState<Patient[]>([]);
+  const [links, setLinks] = useState<WhitelabelLinks | null>(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const activeWhitelabelId = user?.activeWhitelabelId ?? '';
+  const shareTargets = allowedShareTargets(links);
+  const canShare = (user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL') && shareTargets.length > 0;
+  const allPatients = [...patients, ...sharedPatients];
+  const nameOfWhitelabel = (id: string) => shareTargets.find((target) => target.id === id)?.name ?? id;
   const canAssignTherapist = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
   const unassignedCount = patients.filter(isUnassigned).length;
 
@@ -36,9 +48,16 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
 
     const unsubscribeTherapists = therapistService.subscribeToTherapists(setTherapists, whitelabelId);
 
+    // Pacientes de outros whitelabels e vínculos só existem em whitelabels reais.
+    const real = !!whitelabelId && !isLegacyWhitelabel(whitelabelId);
+    const unsubscribeShared = real ? patientService.subscribeToSharedPatients(whitelabelId, setSharedPatients) : () => {};
+    const unsubscribeLinks = real ? whitelabelLinksService.subscribe(whitelabelId, setLinks) : () => {};
+
     return () => {
       unsubscribePatients();
       unsubscribeTherapists();
+      unsubscribeShared();
+      unsubscribeLinks();
     };
   }, [user]);
 
@@ -64,7 +83,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
     }
   };
 
-  const filteredPatients = patients.filter(p => {
+  const filteredPatients = allPatients.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.cpf.includes(searchTerm) ||
       p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -95,6 +114,15 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             >
               <Users size={18} />
               Atribuir terapeuta ({unassignedCount})
+            </button>
+          )}
+          {canShare && (
+            <button
+              onClick={() => setIsShareOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-all active:scale-95"
+            >
+              <Share2 size={18} />
+              Compartilhar
             </button>
           )}
           <button
@@ -141,7 +169,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             )}
           </div>
           <div className="text-xs lg:text-sm text-slate-500 dark:text-slate-400 font-medium">
-            Mostrando <span className="text-slate-900 dark:text-slate-100 font-bold">{filteredPatients.length}</span> de <span className="text-slate-900 dark:text-slate-100 font-bold">{patients.length}</span> pacientes
+            Mostrando <span className="text-slate-900 dark:text-slate-100 font-bold">{filteredPatients.length}</span> de <span className="text-slate-900 dark:text-slate-100 font-bold">{allPatients.length}</span> pacientes
           </div>
         </div>
 
@@ -174,7 +202,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                 </tr>
               ) : (
                 filteredPatients.map((patient) => (
-                  <tr key={patient.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
+                  <tr key={`${patient.whitelabelId ?? ''}-${patient.id}`} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -183,6 +211,13 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                         <div>
                           <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
                           {patient.cpf && <div className="text-xs text-slate-500 dark:text-slate-400">CPF: {patient.cpf}</div>}
+                          {isForeignPatient(patient, activeWhitelabelId) ? (
+                            <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado</span>
+                          ) : (patient.sharedWith ?? []).length > 0 && (
+                            <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary" title={(patient.sharedWith ?? []).map(nameOfWhitelabel).join(', ')}>
+                              Compartilhado com {(patient.sharedWith ?? []).length}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -216,25 +251,29 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                         >
                           <FileText size={18} />
                         </button>
-                        <button
-                          onClick={() => {
-                            setEditingPatient(patient);
-                            setIsModalOpen(true);
-                          }}
-                          className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
-                          title="Editar"
-                          aria-label={`Editar ${patient.name}`}
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDeletePatient(patient.id!)}
-                          className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:bg-rose-900/20 rounded-lg transition-all"
-                          title="Excluir"
-                          aria-label={`Excluir ${patient.name}`}
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {!isForeignPatient(patient, activeWhitelabelId) && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingPatient(patient);
+                                setIsModalOpen(true);
+                              }}
+                              className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
+                              title="Editar"
+                              aria-label={`Editar ${patient.name}`}
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePatient(patient.id!)}
+                              className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:bg-rose-900/20 rounded-lg transition-all"
+                              title="Excluir"
+                              aria-label={`Excluir ${patient.name}`}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -252,7 +291,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             <div className="p-8 text-center text-slate-400 text-sm">Nenhum paciente encontrado.</div>
           ) : (
             filteredPatients.map((patient) => (
-              <div key={patient.id} className="p-4 space-y-3">
+              <div key={`${patient.whitelabelId ?? ''}-${patient.id}`} className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
@@ -261,6 +300,13 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                     <div>
                       <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
                       {patient.cpf && <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">CPF: {patient.cpf}</div>}
+                      {isForeignPatient(patient, activeWhitelabelId) ? (
+                        <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado</span>
+                      ) : (patient.sharedWith ?? []).length > 0 && (
+                        <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                          Compartilhado com {(patient.sharedWith ?? []).length}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -299,23 +345,27 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                     <FileText size={14} />
                     Prontuário
                   </button>
-                  <button 
-                    onClick={() => {
-                      setEditingPatient(patient);
-                      setIsModalOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs font-bold"
-                  >
-                    <Edit2 size={14} />
-                    Editar
-                  </button>
-                  <button 
-                    onClick={() => handleDeletePatient(patient.id!)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-lg text-xs font-bold"
-                  >
-                    <Trash2 size={14} />
-                    Excluir
-                  </button>
+                  {!isForeignPatient(patient, activeWhitelabelId) && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setEditingPatient(patient);
+                          setIsModalOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs font-bold"
+                      >
+                        <Edit2 size={14} />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDeletePatient(patient.id!)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-lg text-xs font-bold"
+                      >
+                        <Trash2 size={14} />
+                        Excluir
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))
@@ -337,6 +387,18 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
         patients={patients}
         therapists={therapists}
         whitelabelId={user?.activeWhitelabelId}
+      />
+
+      <SharePatientsModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        patients={patients.filter((patient): patient is Patient & { id: string } => !!patient.id)}
+        targets={shareTargets}
+        onConfirm={(changes) => patientService.setSharedWith(
+          changes,
+          activeWhitelabelId,
+          { uid: user?.id ?? user?.email ?? '', email: user?.email ?? '' },
+        )}
       />
 
       <ConfirmModal
