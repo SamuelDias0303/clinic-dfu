@@ -122,6 +122,19 @@ async function main() {
     await setDoc(doc(as('terapA'), 'whitelabels/B/sharedAppointments/A__a1'), { sourceWhitelabelId: 'A', appointmentId: 'a1', patientId: 'p1', date: '2026-11-20', time: '09:00' });
     await assertFails(deleteDoc(doc(as('recepB'), 'whitelabels/B/sharedAppointments/A__a1')));
   });
+  // Evoluir no destino: só evolutionId, nunca status.
+  await check('terapeuta do destino liga evolutionId ao agendamento de origem', () =>
+    assertSucceeds(updateDoc(doc(as('terapB'), 'whitelabels/A/appointments/a1'), { evolutionId: 'e1' })));
+  await check('destino não muda o status do agendamento de origem', () =>
+    assertFails(updateDoc(doc(as('terapB'), 'whitelabels/A/appointments/a1'), { status: 'CONCLUÍDO' })));
+  await check('recepção do destino não liga evolutionId', () =>
+    assertFails(updateDoc(doc(as('recepB'), 'whitelabels/A/appointments/a1'), { evolutionId: 'e2' })));
+  await check('whitelabel fora da tag não liga evolutionId', () =>
+    assertFails(updateDoc(doc(as('gestorC'), 'whitelabels/A/appointments/a1'), { evolutionId: 'e3' })));
+  await check('destino liga evolutionId só na própria cópia', async () => {
+    await assertSucceeds(updateDoc(doc(as('gestorB'), 'whitelabels/B/sharedAppointments/A__a1'), { evolutionId: 'e1' }));
+    await assertFails(updateDoc(doc(as('gestorB'), 'whitelabels/B/sharedAppointments/A__a1'), { status: 'CONCLUÍDO' }));
+  });
   await check('coleção raiz legada de pacientes continua negada', () =>
     assertFails(getDoc(doc(as('gestorB'), 'patients/legado'))));
   // vínculos.

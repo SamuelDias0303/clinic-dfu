@@ -16,6 +16,9 @@ interface MyDayCardProps {
   // Sessões de dias anteriores concluídas e sem evolução (já limitadas pelo chamador).
   pendingEvolutions: Appointment[];
   pendingTotal: number;
+  // Sessões de hoje marcadas por outro whitelabel: o dono conclui; aqui só Evoluir e Prontuário.
+  externalAppointments?: Appointment[];
+  sourceNameOf?: (appointment: Appointment) => string;
   showTherapist: boolean;
   canRecordEvolution: boolean;
   busyId: string | null;
@@ -30,6 +33,8 @@ export default function MyDayCard({
   todayAppointments,
   pendingEvolutions,
   pendingTotal,
+  externalAppointments = [],
+  sourceNameOf,
   showTherapist,
   canRecordEvolution,
   busyId,
@@ -41,6 +46,7 @@ export default function MyDayCard({
 }: MyDayCardProps) {
   const today = [...todayAppointments].sort((a, b) => a.time.localeCompare(b.time));
   const hasEvolution = (appointment: Appointment) => !!appointment.evolutionId || !!appointment.clinicalEvolution?.trim();
+  const external = [...externalAppointments].sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -52,10 +58,39 @@ export default function MyDayCard({
         </button>
       </div>
 
-      {today.length === 0 ? (
+      {today.length === 0 && external.length === 0 ? (
         <p className="p-6 text-sm text-slate-400 dark:text-slate-500">Nenhum atendimento para hoje.</p>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          {external.map((appointment) => (
+            <li key={`ext-${appointment.whitelabelId}-${appointment.id}`} className="flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 px-4 py-3 dark:bg-slate-800/40 sm:px-6">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="w-12 shrink-0 text-sm font-bold tabular-nums text-slate-700 dark:text-slate-200">{appointment.time}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{appointment.patientName}</p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    {appointment.type}{showTherapist && ` · ${appointment.therapistName}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-[10px] font-bold text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                  {sourceNameOf?.(appointment) ?? 'Outra clínica'}
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyles[appointment.status]}`}>{appointment.status}</span>
+                {canRecordEvolution && appointment.status !== 'CANCELADO' && !hasEvolution(appointment) && (
+                  <button onClick={() => onEvolve(appointment)} className={actionClass} title="Registrar evolução desta sessão">
+                    <PenTool size={14} />
+                    Evoluir
+                  </button>
+                )}
+                <button onClick={() => onOpenProntuario(appointment)} className={actionClass} title="Abrir prontuário">
+                  <FileText size={14} />
+                  Prontuário
+                </button>
+              </div>
+            </li>
+          ))}
           {today.map((appointment) => (
             <li key={appointment.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
               <div className="flex min-w-0 items-center gap-4">

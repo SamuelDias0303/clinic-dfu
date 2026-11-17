@@ -48,9 +48,9 @@ export function buildPatientCopy(patient: Patient & { id: string }, ownerWhitela
 }
 
 // Cópia do agendamento para a agenda do destino: só o bloco de horário.
-// shortcut: notas e evolução clínica ficam de fora de propósito; se o destino precisar delas, abrir por outro caminho.
+// shortcut: notas e evolução clínica ficam de fora de propósito; se o destino precisar delas, abrir por outro caminho. evolutionId vai, para o destino saber que já registrou.
 export function buildAppointmentCopy(appointment: Appointment & { id: string }, sourceWhitelabelId: string) {
-  const { id, whitelabelId, notes, clinicalEvolution, sharedToWhitelabels, evolutionId, ...rest } = appointment;
+  const { id, whitelabelId, notes, clinicalEvolution, sharedToWhitelabels, ...rest } = appointment;
   return { ...rest, sourceWhitelabelId, appointmentId: id };
 }
 
@@ -77,4 +77,9 @@ export function buildSharedWithAudit(
     actorUid: actor.uid,
     actorEmail: actor.email,
   };
+}
+
+// "Meu dia" do destino: o terapeuta vê só os compartilhados em que ele é o terapeuta; os outros papéis veem todos.
+export function visibleExternalAppointments<T extends Pick<Appointment, 'therapistId'>>(list: T[], role: string | null | undefined, email: string): T[] {
+  return role === 'TERAPEUTA' ? list.filter((item) => item.therapistId === email) : list;
 }

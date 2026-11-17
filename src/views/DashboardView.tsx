@@ -18,7 +18,9 @@ import { patientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';
 import { packageService } from '../services/packageService';
 import { isLegacyWhitelabel } from '../services/serviceScope';
-import { Patient, Appointment, Package } from '../types';
+import { whitelabelLinksService } from '../services/whitelabelLinksService';
+import { allowedShareTargets, visibleExternalAppointments } from '../lib/sharing';
+import { Patient, Appointment, Package, WhitelabelLinks } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
 const DAILY_APPOINTMENT_CAPACITY = 14;
@@ -36,6 +38,9 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
   // Pacientes de outros whitelabels: entram só nos pacotes e nos atalhos de prontuário, nunca nas contagens.
   const [sharedPatients, setSharedPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  // Sessões marcadas por outro whitelabel: só aparecem em "Meu dia", fora de qualquer contagem.
+  const [externalAppointments, setExternalAppointments] = useState<Appointment[]>([]);
+  const [links, setLinks] = useState<WhitelabelLinks | null>(null);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,12 +64,17 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
     const unsubscribeShared = whitelabelId && !isLegacyWhitelabel(whitelabelId)
       ? patientService.subscribeToSharedPatients(whitelabelId, setSharedPatients)
       : () => {};
+    const real = !!whitelabelId && !isLegacyWhitelabel(whitelabelId);
+    const unsubscribeExternal = real ? appointmentService.subscribeToSharedAppointments(whitelabelId, setExternalAppointments) : () => {};
+    const unsubscribeLinks = real ? whitelabelLinksService.subscribe(whitelabelId, setLinks) : () => {};
 
     return () => {
       unsubscribePatients();
       unsubscribeAppointments();
       unsubscribePackages();
       unsubscribeShared();
+      unsubscribeExternal();
+      unsubscribeLinks();
     };
   }, [user]);
 
@@ -80,6 +90,14 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
     .filter(app => app.date !== todayStr)
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
   const canRecordEvolution = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR' || user?.activeRole === 'TERAPEUTA';
+
+  const todayExternal = visibleExternalAppointments<Appointment>(
+    externalAppointments.filter(app => app.date === todayStr),
+    user?.activeRole,
+    user?.email ?? '',
+  );
+  const sourceNameOf = (appointment: Appointment) =>
+    allowedShareTargets(links).find(target => target.id === appointment.whitelabelId)?.name ?? 'Outra clínica';
 
   const visiblePatients = [...patients, ...sharedPatients];
   const findPatient = (appointment: Appointment) => visiblePatients.find(patient => patient.id === appointment.patientId);
@@ -163,6 +181,8 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
         <div className="lg:col-span-2 min-w-0">
           <MyDayCard
             todayAppointments={todayAppointments}
+            externalAppointments={todayExternal}
+            sourceNameOf={sourceNameOf}
             pendingEvolutions={pendingBefore.slice(0, 8)}
             pendingTotal={pendingBefore.length}
             showTherapist={user?.activeRole !== 'TERAPEUTA'}

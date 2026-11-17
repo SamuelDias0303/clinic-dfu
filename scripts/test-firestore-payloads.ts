@@ -3,7 +3,7 @@ import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
-import { allowedShareTargets, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
+import { allowedShareTargets, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -256,3 +256,19 @@ assert.deepEqual(
 );
 
 console.log('OK: pacote por terapeuta.');
+
+// "Meu dia" do destino: terapeuta vê só os compartilhados com o e-mail dele; os outros papéis veem todos.
+const sharedToday = [
+  { id: 'x1', therapistId: 'ana@x.com' },
+  { id: 'x2', therapistId: 'bia@x.com' },
+];
+assert.deepEqual(visibleExternalAppointments(sharedToday, 'TERAPEUTA', 'ana@x.com').map((item) => item.id), ['x1']);
+assert.deepEqual(visibleExternalAppointments(sharedToday, 'GESTOR', 'ana@x.com').map((item) => item.id), ['x1', 'x2']);
+assert.deepEqual(visibleExternalAppointments(sharedToday, 'REPCAO', 'ana@x.com').map((item) => item.id), ['x1', 'x2']);
+
+// A cópia leva evolutionId para o "Meu dia" saber que a evolução já foi registrada.
+assert.equal(
+  buildAppointmentCopy({ id: 'a2', patientId: 'p1', patientName: 'B', therapistId: 't', therapistName: 'T', date: '2026-11-20', time: '09:00', type: 'Consulta', status: 'AGUARDANDO', evolutionId: 'e9' }, 'A').evolutionId,
+  'e9',
+);
+console.log('OK: meu dia compartilhado.');

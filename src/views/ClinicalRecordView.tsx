@@ -126,10 +126,12 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
       } else {
         const now = new Date();
         const [year, month, day] = linkedAppointment ? linkedAppointment.date.split('-') : [];
+        // Sessão marcada por outro whitelabel: quem evolui aqui é quem está logado, não o terapeuta de lá.
+        const fromOtherWhitelabel = !!linkedAppointment?.whitelabelId && linkedAppointment.whitelabelId !== user.activeWhitelabelId;
         const created = await clinicalRecordService.createEvolution({
           patientId: patient.id,
-          therapistId: linkedAppointment?.therapistId ?? user.email,
-          therapistName: linkedAppointment?.therapistName ?? user.name,
+          therapistId: (!fromOtherWhitelabel && linkedAppointment?.therapistId) || user.email,
+          therapistName: (!fromOtherWhitelabel && linkedAppointment?.therapistName) || user.name,
           date: linkedAppointment ? `${day}/${month}/${year}` : now.toLocaleDateString('pt-BR'),
           time: linkedAppointment?.time ?? now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
           type: linkedAppointment?.type ?? 'SESSÃO DE ATENDIMENTO',
@@ -140,7 +142,11 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
 
         if (linkedAppointment?.id) {
           setLinkedEvolutionId(created.id);
-          await appointmentService.updateAppointment(linkedAppointment.id, { evolutionId: created.id }, user.activeWhitelabelId);
+          if (fromOtherWhitelabel && user.activeWhitelabelId) {
+            await appointmentService.linkSharedEvolution(linkedAppointment.id, linkedAppointment.whitelabelId!, created.id, user.activeWhitelabelId);
+          } else {
+            await appointmentService.updateAppointment(linkedAppointment.id, { evolutionId: created.id }, user.activeWhitelabelId);
+          }
         }
       }
 

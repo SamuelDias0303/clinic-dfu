@@ -201,6 +201,17 @@ export const appointmentService = {
     await batch.commit();
   },
 
+  /**
+   * Evoluir no whitelabel que recebeu o compartilhamento: liga a evolução ao agendamento de
+   * origem e à cópia daqui. Só evolutionId; status continua do dono (regras do Firestore).
+   */
+  async linkSharedEvolution(appointmentId: string, sourceWhitelabelId: string, evolutionId: string, whitelabelId: string) {
+    const batch = writeBatch(db);
+    batch.update(scopedDoc(COLLECTIONS.appointments, appointmentId, sourceWhitelabelId), { evolutionId });
+    batch.update(sharedCopyDoc(TENANT_COLLECTIONS.sharedAppointments, whitelabelId, sourceWhitelabelId, appointmentId), { evolutionId });
+    await batch.commit();
+  },
+
   /** Agendamentos marcados por outros whitelabels para aparecer aqui (só leitura). */
   subscribeToSharedAppointments(whitelabelId: string, callback: (appointments: Appointment[]) => void) {
     return onSnapshot(collection(db, tenantCollectionPath(whitelabelId, TENANT_COLLECTIONS.sharedAppointments)), (snapshot) => {

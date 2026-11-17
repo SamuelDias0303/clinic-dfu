@@ -85,3 +85,14 @@ Dentro do limite de 10 acessos por requisição. `sharedWith` só é validado co
 ## Fica para quem constrói
 
 Forma exata dos testes de regras e do modal, e como tratar agendamentos antigos de um paciente já descompartilhado (o agendamento continua na agenda do destino, mas o paciente deixa de abrir).
+
+## Complemento: agendamentos compartilhados em "Meu dia" (2026-11-17)
+
+Pedido do usuário: o agendamento compartilhado também aparece em "Meu dia" no whitelabel que recebeu.
+
+- Quem recebe vê, em "Meu dia", os blocos compartilhados de hoje com selo do whitelabel de origem e só duas ações: **Evoluir** e **Prontuário**. **Concluir** continua só do dono do agendamento.
+- Visibilidade: gestor, recepção e admin veem todos; terapeuta vê só os que têm o e-mail dele em `therapistId`.
+- Os cartões do Painel (agenda de hoje, capacidade, pendências, pacotes) continuam sem esses blocos.
+- Evoluir grava a evolução no whitelabel do paciente e liga `evolutionId` ao agendamento de origem. Regra nova e estreita: gestor ou terapeuta de um whitelabel da tag altera no agendamento de origem **somente** `evolutionId` (e `updatedAt`), e na própria cópia somente `evolutionId`. Status nunca.
+- A cópia passa a levar `evolutionId`, para o "Meu dia" esconder Evoluir depois de registrada.
+- Limite: com a tag em mais de um destino, o `evolutionId` que um destino liga aparece na origem e na cópia dele; a cópia dos outros destinos só atualiza quando a origem editar de novo.
