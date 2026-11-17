@@ -35,3 +35,46 @@ export function clampShareTargets(requested: string[], allowedIds: string[]): st
   const allowed = new Set(allowedIds);
   return [...new Set(requested)].filter((id) => allowed.has(id)).slice(0, MAX_SHARED_WHITELABELS);
 }
+
+// Id da cópia-índice no whitelabel de destino: {origem}__{id do original}.
+export function sharedCopyId(originWhitelabelId: string, id: string): string {
+  return `${originWhitelabelId}__${id}`;
+}
+
+// Cópia do cadastro para a lista do destino. Sem sharedWith (é do original) e sem id/whitelabelId.
+export function buildPatientCopy(patient: Patient & { id: string }, ownerWhitelabelId: string) {
+  const { id, whitelabelId, sharedWith, ...rest } = patient;
+  return { ...rest, ownerWhitelabelId, patientId: id };
+}
+
+// Cópia do agendamento para a agenda do destino: só o bloco de horário.
+// shortcut: notas e evolução clínica ficam de fora de propósito; se o destino precisar delas, abrir por outro caminho.
+export function buildAppointmentCopy(appointment: Appointment & { id: string }, sourceWhitelabelId: string) {
+  const { id, whitelabelId, notes, clinicalEvolution, sharedToWhitelabels, evolutionId, ...rest } = appointment;
+  return { ...rest, sourceWhitelabelId, appointmentId: id };
+}
+
+export function copyTargetsDiff(previous: string[] | undefined, next: string[]) {
+  const before = new Set(previous ?? []);
+  const after = new Set(next);
+  return {
+    add: next.filter((id) => !before.has(id)),
+    remove: [...before].filter((id) => !after.has(id)),
+  };
+}
+
+export function buildSharedWithAudit(
+  patientId: string,
+  ownerWhitelabelId: string,
+  targets: string[],
+  actor: { uid: string; email: string },
+) {
+  return {
+    action: 'PACIENTE_COMPARTILHADO' as const,
+    patientId,
+    ownerWhitelabelId,
+    targets,
+    actorUid: actor.uid,
+    actorEmail: actor.email,
+  };
+}

@@ -3,7 +3,7 @@ import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
-import { allowedShareTargets, clampShareTargets, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, splitAppointments } from '../src/lib/sharing';
+import { allowedShareTargets, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -203,3 +203,39 @@ assert.deepEqual(
 );
 
 console.log('OK: compartilhamento entre whitelabels.');
+
+// Cópias-índice no destino.
+assert.equal(sharedCopyId('A', 'p1'), 'A__p1');
+
+const patientCopy = buildPatientCopy({ id: 'p1', whitelabelId: 'A', name: 'Bebê', cpf: '', birthDate: '2026-01-01', phone: '', email: '', healthPlan: '', address: '', status: 'Ativo', sharedWith: ['B'] }, 'A');
+assert.equal(patientCopy.ownerWhitelabelId, 'A');
+assert.equal(patientCopy.patientId, 'p1');
+assert.equal(patientCopy.name, 'Bebê');
+assert.equal('id' in patientCopy, false);
+assert.equal('sharedWith' in patientCopy, false);
+assert.equal('whitelabelId' in patientCopy, false);
+
+const appointmentCopy = buildAppointmentCopy({ id: 'a1', whitelabelId: 'A', patientId: 'p1', patientName: 'Bebê', therapistId: 't', therapistName: 'T', date: '2026-11-20', time: '09:00', type: 'Consulta', status: 'AGUARDANDO', sharedToWhitelabels: ['B'], notes: 'privado', clinicalEvolution: 'privado' }, 'A');
+assert.equal(appointmentCopy.sourceWhitelabelId, 'A');
+assert.equal(appointmentCopy.appointmentId, 'a1');
+assert.equal(appointmentCopy.date, '2026-11-20');
+assert.equal('id' in appointmentCopy, false);
+assert.equal('whitelabelId' in appointmentCopy, false);
+// Notas e evolução clínica do agendamento não vão para a cópia: o destino só precisa do bloco de horário.
+assert.equal('notes' in appointmentCopy, false);
+assert.equal('clinicalEvolution' in appointmentCopy, false);
+
+assert.deepEqual(copyTargetsDiff(['B'], ['B', 'C']), { add: ['C'], remove: [] });
+assert.deepEqual(copyTargetsDiff(['B', 'C'], ['C']), { add: [], remove: ['B'] });
+assert.deepEqual(copyTargetsDiff(undefined, ['B']), { add: ['B'], remove: [] });
+
+assert.deepEqual(buildSharedWithAudit('p1', 'A', ['B'], { uid: 'u1', email: 'g@x.com' }), {
+  action: 'PACIENTE_COMPARTILHADO',
+  patientId: 'p1',
+  ownerWhitelabelId: 'A',
+  targets: ['B'],
+  actorUid: 'u1',
+  actorEmail: 'g@x.com',
+});
+
+console.log('OK: copias-indice de compartilhamento.');

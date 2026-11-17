@@ -1,5 +1,6 @@
 import {
   addDoc,
+  collection,
   deleteDoc,
   getDoc,
   getDocs,
@@ -8,9 +9,41 @@ import {
   serverTimestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { toFirestoreData } from '../lib/firestoreData';
+import { buildAppointmentCopy } from '../lib/sharing';
+import { tenantCollectionPath, TENANT_COLLECTIONS } from '../lib/tenantPaths';
 import { Appointment } from '../types';
-import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './serviceScope';
+import { COLLECTIONS, isLegacyWhitelabel, scopedCollection, scopedDoc, sharedCopyDoc, withTenantField } from './serviceScope';
+
+type SavedAppointment = Appointment & { id: string };
+
+// Agendamento marcado para outro whitelabel: o destino lê uma cópia-índice (só o bloco de horário).
+async function syncSharedCopies(appointment: SavedAppointment, whitelabelId: string | null | undefined, previousTargets: string[] = []) {
+  if (!whitelabelId || isLegacyWhitelabel(whitelabelId)) return;
+  const targets = appointment.sharedToWhitelabels ?? [];
+  if (targets.length === 0 && previousTargets.length === 0) return;
+
+  const batch = writeBatch(db);
+  targets.forEach((target) => {
+    batch.set(
+      sharedCopyDoc(TENANT_COLLECTIONS.sharedAppointments, target, whitelabelId, appointment.id),
+      toFirestoreData(buildAppointmentCopy(appointment, whitelabelId)),
+    );
+  });
+  previousTargets.filter((target) => !targets.includes(target)).forEach((target) => {
+    batch.delete(sharedCopyDoc(TENANT_COLLECTIONS.sharedAppointments, target, whitelabelId, appointment.id));
+  });
+  await batch.commit();
+}
+
+async function removeSharedCopies(id: string, targets: string[], whitelabelId: string | null | undefined) {
+  if (!whitelabelId || isLegacyWhitelabel(whitelabelId) || targets.length === 0) return;
+  await Promise.all(targets.map((target) => deleteDoc(sharedCopyDoc(TENANT_COLLECTIONS.sharedAppointments, target, whitelabelId, id))
+    .catch((error) => console.warn('Não foi possível remover a cópia do agendamento compartilhado:', error))));
+}
 
 function makeRecurrenceId() {
   return typeof crypto.randomUUID === 'function'
@@ -131,7 +164,29 @@ export const appointmentService = {
       )
     );
 
+    try {
+      await Promise.all(results.map((result, index) =>
+        syncSharedCopies({ ...appointmentsToCreate[index], id: result.id } as SavedAppointment, whitelabelId)));
+    } catch (error) {
+      console.error('Error sharing appointment:', error);
+      throw new Error('Agendamento salvo, mas não foi possível mostrá-lo na agenda do outro whitelabel.');
+    }
+
     return results[0].id;
+  },
+
+  /** Agendamentos marcados por outros whitelabels para aparecer aqui (só leitura). */
+  subscribeToSharedAppointments(whitelabelId: string, callback: (appointments: Appointment[]) => void) {
+    return onSnapshot(collection(db, tenantCollectionPath(whitelabelId, TENANT_COLLECTIONS.sharedAppointments)), (snapshot) => {
+      const appointments = snapshot.docs.map((item) => {
+        const { sourceWhitelabelId, appointmentId, ...rest } = item.data();
+        return { ...rest, id: appointmentId, whitelabelId: sourceWhitelabelId } as Appointment;
+      });
+      callback(appointments.sort((a, b) => a.date !== b.date ? a.date.localeCompare(b.date) : a.time.localeCompare(b.time)));
+    }, (error) => {
+      console.error('Error subscribing to shared appointments:', error);
+      callback([]);
+    });
   },
 
   subscribeToAppointments(
@@ -164,11 +219,11 @@ export const appointmentService = {
 
   async updateAppointment(id: string, appointment: Partial<Appointment>, whitelabelId?: string | null) {
     const docRef = scopedDoc(COLLECTIONS.appointments, id, whitelabelId);
+    const snapshot = await getDoc(docRef);
+    if (!snapshot.exists()) throw new Error('Agendamento não encontrado.');
+    const current = snapshot.data() as Appointment;
 
     if (appointment.date || appointment.time || appointment.therapistId) {
-      const snapshot = await getDoc(docRef);
-      if (!snapshot.exists()) throw new Error('Agendamento não encontrado.');
-      const current = snapshot.data() as Appointment;
 
       const therapistId = appointment.therapistId || current.therapistId;
       const date = appointment.date || current.date;
@@ -181,12 +236,20 @@ export const appointmentService = {
     }
 
     await updateDoc(docRef, withTenantField(appointment, whitelabelId));
+
+    await syncSharedCopies({ ...current, ...appointment, id } as SavedAppointment, whitelabelId, current.sharedToWhitelabels)
+      .catch((error) => {
+        console.error('Error sharing appointment:', error);
+        throw new Error('Agendamento salvo, mas não foi possível atualizar a agenda do outro whitelabel.');
+      });
   },
 
   async deleteAppointment(id: string, whitelabelId?: string | null) {
     if (!id) throw new Error('ID do agendamento é obrigatório para exclusão.');
     const docRef = scopedDoc(COLLECTIONS.appointments, id, whitelabelId);
+    const snapshot = await getDoc(docRef);
     await deleteDoc(docRef);
+    await removeSharedCopies(id, snapshot.exists() ? (snapshot.data() as Appointment).sharedToWhitelabels ?? [] : [], whitelabelId);
   },
 
   async deleteRecurrence(recurrenceId: string, whitelabelId?: string | null) {
@@ -199,5 +262,6 @@ export const appointmentService = {
     const snapshot = await getDocs(q);
     const deletePromises = snapshot.docs.map((item) => deleteDoc(item.ref));
     await Promise.all(deletePromises);
+    await Promise.all(snapshot.docs.map((item) => removeSharedCopies(item.id, (item.data() as Appointment).sharedToWhitelabels ?? [], whitelabelId)));
   },
 };

@@ -11,7 +11,7 @@ import { COLLECTIONS, scopedCollection, scopedDoc, withTenantField } from './ser
 
 export const packageService = {
   async createPackage(
-    data: { patientId: string; totalSessions: number; createdBy: string },
+    data: { patientId: string; totalSessions: number; createdBy: string; therapistId?: string; therapistName?: string; patientWhitelabelId?: string },
     whitelabelId?: string | null
   ) {
     const docRef = await addDoc(scopedCollection(COLLECTIONS.packages, whitelabelId), {

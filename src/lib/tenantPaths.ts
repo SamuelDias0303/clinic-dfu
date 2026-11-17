@@ -3,6 +3,7 @@ export const ROOT_COLLECTIONS = {
   whitelabels: 'whitelabels',
   legacyClients: 'clients',
   invites: 'invites',
+  whitelabelLinks: 'whitelabelLinks',
 } as const;
 
 export const TENANT_COLLECTIONS = {
@@ -11,6 +12,8 @@ export const TENANT_COLLECTIONS = {
   therapists: 'therapists',
   appointments: 'appointments',
   packages: 'packages',
+  sharedPatients: 'sharedPatients',
+  sharedAppointments: 'sharedAppointments',
   evolutions: 'evolutions',
   anamneses: 'anamneses',
   auditLogs: 'auditLogs',

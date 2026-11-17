@@ -2,6 +2,7 @@ import { collection, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toFirestoreData } from '../lib/firestoreData';
 import { tenantCollectionPath, TENANT_COLLECTIONS, TenantCollection } from '../lib/tenantPaths';
+import { sharedCopyId } from '../lib/sharing';
 
 export const LEGACY_WHITELABEL_ID = 'legacy-default';
 
@@ -31,6 +32,11 @@ export function scopedDoc(collectionName: TenantCollection, id: string, whitelab
   }
 
   return doc(db, tenantCollectionPath(whitelabelId, collectionName), id);
+}
+
+// Cópia-índice no whitelabel de destino ({origem}__{id}); só existe em whitelabels reais.
+export function sharedCopyDoc(collectionName: 'sharedPatients' | 'sharedAppointments', targetWhitelabelId: string, originWhitelabelId: string, id: string) {
+  return doc(db, tenantCollectionPath(targetWhitelabelId, collectionName), sharedCopyId(originWhitelabelId, id));
 }
 
 export function withTenantField<T extends Record<string, unknown>>(data: T, whitelabelId?: string | null): T {
