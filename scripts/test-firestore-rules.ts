@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import { assertFails, assertSucceeds, initializeTestEnvironment } from '@firebase/rules-unit-testing';
-import { collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, query, setDoc, updateDoc, where, writeBatch } from 'firebase/firestore';
 
 // Rodar com: npm run test:rules (sobe o emulador do Firestore).
 const PROJECT = 'demo-clinic-rules';
@@ -116,6 +116,12 @@ async function main() {
     assertFails(setDoc(doc(as('terapA'), 'whitelabels/C/sharedAppointments/A__a1'), {
       sourceWhitelabelId: 'A', appointmentId: 'a1', patientId: 'p1', date: '2026-11-20', time: '09:00',
     })));
+  await check('gestor do destino apaga cópia de agendamento na própria agenda', () =>
+    assertSucceeds(deleteDoc(doc(as('gestorB'), 'whitelabels/B/sharedAppointments/A__a1'))));
+  await check('recepção do destino não apaga cópia de agendamento', async () => {
+    await setDoc(doc(as('terapA'), 'whitelabels/B/sharedAppointments/A__a1'), { sourceWhitelabelId: 'A', appointmentId: 'a1', patientId: 'p1', date: '2026-11-20', time: '09:00' });
+    await assertFails(deleteDoc(doc(as('recepB'), 'whitelabels/B/sharedAppointments/A__a1')));
+  });
   await check('coleção raiz legada de pacientes continua negada', () =>
     assertFails(getDoc(doc(as('gestorB'), 'patients/legado'))));
   // vínculos.

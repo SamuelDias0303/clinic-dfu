@@ -175,6 +175,32 @@ export const appointmentService = {
     return results[0].id;
   },
 
+  /**
+   * Paciente deixou de ser compartilhado com estes whitelabels: tira a tag dos agendamentos
+   * daqui, apaga as cópias lá e apaga, na agenda daqui, as cópias que eles marcaram para cá.
+   */
+  // shortcut: um único lote (500 operações); revisar se algum paciente passar de ~250 agendamentos marcados.
+  async unshareForPatient(patientId: string, removedTargets: string[], whitelabelId: string) {
+    if (removedTargets.length === 0 || isLegacyWhitelabel(whitelabelId)) return;
+
+    const batch = writeBatch(db);
+    const own = await getDocs(query(scopedCollection(COLLECTIONS.appointments, whitelabelId), where('patientId', '==', patientId)));
+    own.docs.forEach((item) => {
+      const tags: string[] = item.data().sharedToWhitelabels ?? [];
+      const gone = tags.filter((id) => removedTargets.includes(id));
+      if (gone.length === 0) return;
+      batch.update(item.ref, { sharedToWhitelabels: tags.filter((id) => !gone.includes(id)) });
+      gone.forEach((target) => batch.delete(sharedCopyDoc(TENANT_COLLECTIONS.sharedAppointments, target, whitelabelId, item.id)));
+    });
+
+    const incoming = await getDocs(query(collection(db, tenantCollectionPath(whitelabelId, TENANT_COLLECTIONS.sharedAppointments)), where('patientId', '==', patientId)));
+    incoming.docs.forEach((item) => {
+      if (removedTargets.includes(item.data().sourceWhitelabelId)) batch.delete(item.ref);
+    });
+
+    await batch.commit();
+  },
+
   /** Agendamentos marcados por outros whitelabels para aparecer aqui (só leitura). */
   subscribeToSharedAppointments(whitelabelId: string, callback: (appointments: Appointment[]) => void) {
     return onSnapshot(collection(db, tenantCollectionPath(whitelabelId, TENANT_COLLECTIONS.sharedAppointments)), (snapshot) => {

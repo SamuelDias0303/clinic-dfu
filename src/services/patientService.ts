@@ -17,6 +17,7 @@ import { toFirestoreData } from '../lib/firestoreData';
 import { buildPatientCopy, buildSharedWithAudit, copyTargetsDiff } from '../lib/sharing';
 import { tenantCollectionPath, TENANT_COLLECTIONS } from '../lib/tenantPaths';
 import { Patient } from '../types';
+import { appointmentService } from './appointmentService';
 import { COLLECTIONS, isLegacyWhitelabel, scopedCollection, scopedDoc, sharedCopyDoc, withTenantField } from './serviceScope';
 
 type SavedPatient = Patient & { id: string };
@@ -110,6 +111,9 @@ export const patientService = {
     await deleteDoc(docRef);
 
     const targets: string[] = saved?.exists() ? saved.data().sharedWith ?? [] : [];
+    await appointmentService.unshareForPatient(id, targets, whitelabelId!).catch((error) => {
+      console.warn('Não foi possível limpar a agenda compartilhada do paciente:', error);
+    });
     await Promise.all(targets.map((target) => deleteDoc(sharedCopyDoc(TENANT_COLLECTIONS.sharedPatients, target, whitelabelId!, id))
       .catch((error) => console.warn('Não foi possível remover a cópia do paciente compartilhado:', error))));
   },
@@ -161,6 +165,10 @@ export const patientService = {
         );
       });
       await batch.commit();
+
+      // Sem isso, blocos de agenda já copiados continuariam visíveis para quem perdeu o acesso.
+      await Promise.all(changes.slice(start, start + CHUNK).map(({ patient, sharedWith }) =>
+        appointmentService.unshareForPatient(patient.id, copyTargetsDiff(patient.sharedWith, sharedWith).remove, whitelabelId)));
     }
   },
 

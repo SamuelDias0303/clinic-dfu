@@ -657,7 +657,9 @@ service cloud.firestore {
               'sharedToWhitelabels'
             )
           );
+        // O gestor do destino também apaga: é como ele tira o rastro de um paciente descompartilhado.
         allow delete: if isAdminGlobal()
+          || isGestor(whitelabelId)
           || hasTenantRole(resource.data.sourceWhitelabelId, ['GESTOR', 'REPCAO', 'TERAPEUTA']);
       }
 
