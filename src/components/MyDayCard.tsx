@@ -19,6 +19,8 @@ interface MyDayCardProps {
   // Sessões de hoje marcadas por outro whitelabel: o dono conclui; aqui só Evoluir e Prontuário.
   externalAppointments?: Appointment[];
   sourceNameOf?: (appointment: Appointment) => string;
+  // Paciente compartilhado em só leitura não ganha o botão Evoluir.
+  canEvolveExternal?: (appointment: Appointment) => boolean;
   showTherapist: boolean;
   canRecordEvolution: boolean;
   busyId: string | null;
@@ -35,6 +37,7 @@ export default function MyDayCard({
   pendingTotal,
   externalAppointments = [],
   sourceNameOf,
+  canEvolveExternal,
   showTherapist,
   canRecordEvolution,
   busyId,
@@ -78,7 +81,7 @@ export default function MyDayCard({
                   {sourceNameOf?.(appointment) ?? 'Outra clínica'}
                 </span>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyles[appointment.status]}`}>{appointment.status}</span>
-                {canRecordEvolution && appointment.status !== 'CANCELADO' && !hasEvolution(appointment) && (
+                {canRecordEvolution && (canEvolveExternal?.(appointment) ?? true) && appointment.status !== 'CANCELADO' && !hasEvolution(appointment) && (
                   <button onClick={() => onEvolve(appointment)} className={actionClass} title="Registrar evolução desta sessão">
                     <PenTool size={14} />
                     Evoluir

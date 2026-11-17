@@ -1,4 +1,4 @@
-import { Appointment, Package, Patient, WhitelabelLinks } from '../types';
+import { Appointment, Package, Patient, ShareLevel, WhitelabelLinks } from '../types';
 
 // Limite das regras do Firestore: elas olham posições fixas (0, 1, 2) de sharedWith.
 export const MAX_SHARED_WHITELABELS = 3;
@@ -42,9 +42,9 @@ export function sharedCopyId(originWhitelabelId: string, id: string): string {
 }
 
 // Cópia do cadastro para a lista do destino. Sem sharedWith (é do original) e sem id/whitelabelId.
-export function buildPatientCopy(patient: Patient & { id: string }, ownerWhitelabelId: string) {
-  const { id, whitelabelId, sharedWith, ...rest } = patient;
-  return { ...rest, ownerWhitelabelId, patientId: id };
+export function buildPatientCopy(patient: Patient & { id: string }, ownerWhitelabelId: string, accessLevel?: ShareLevel) {
+  const { id, whitelabelId, sharedWith, sharedAccess, accessLevel: _ignored, ...rest } = patient;
+  return { ...rest, ownerWhitelabelId, patientId: id, ...(accessLevel ? { accessLevel } : {}) };
 }
 
 // Cópia do agendamento para a agenda do destino: só o bloco de horário.
@@ -82,4 +82,55 @@ export function buildSharedWithAudit(
 // "Meu dia" do destino: o terapeuta vê só os compartilhados em que ele é o terapeuta; os outros papéis veem todos.
 export function visibleExternalAppointments<T extends Pick<Appointment, 'therapistId'>>(list: T[], role: string | null | undefined, email: string): T[] {
   return role === 'TERAPEUTA' ? list.filter((item) => item.therapistId === email) : list;
+}
+
+// --- Níveis de acesso por destino ------------------------------------------
+export const SHARE_LEVELS: ShareLevel[] = ['LEITURA', 'PADRAO', 'EDICAO'];
+
+export const SHARE_LEVEL_LABELS: Record<ShareLevel, string> = {
+  LEITURA: 'Só leitura',
+  PADRAO: 'Padrão',
+  EDICAO: 'Edição',
+};
+
+export function levelOf(access: Record<string, ShareLevel> | undefined, whitelabelId: string): ShareLevel {
+  return access?.[whitelabelId] ?? 'PADRAO';
+}
+
+// Agendar, evoluir e anamnese: tudo menos só leitura.
+export function canWriteClinical(level: ShareLevel): boolean {
+  return level !== 'LEITURA';
+}
+
+export function canEditSharedPatient(level: ShareLevel): boolean {
+  return level === 'EDICAO';
+}
+
+// Paciente do próprio whitelabel nunca é limitado; o compartilhado usa o nível da cópia.
+export function patientLevel(patient: Pick<Patient, 'whitelabelId' | 'accessLevel'>, activeWhitelabelId: string): ShareLevel {
+  return isForeignPatient(patient, activeWhitelabelId) ? patient.accessLevel ?? 'PADRAO' : 'EDICAO';
+}
+
+// Só chaves que continuam em sharedWith e níveis válidos.
+export function normalizeAccess(sharedWith: string[], access: Record<string, ShareLevel> | undefined): Record<string, ShareLevel> {
+  const result: Record<string, ShareLevel> = {};
+  sharedWith.forEach((id) => {
+    const level = access?.[id];
+    if (level && SHARE_LEVELS.includes(level)) result[id] = level;
+  });
+  return result;
+}
+
+// Campos que o destino com nível EDICAO nunca grava no paciente de origem (as regras também negam).
+const FOREIGN_FORBIDDEN_FIELDS = [
+  'id', 'whitelabelId', 'createdAt', 'sharedWith', 'sharedAccess', 'accessLevel',
+  'therapistId', 'therapistName', 'ownerWhitelabelId', 'patientId',
+];
+
+export function stripForeignEditFields<T extends Record<string, unknown>>(data: T): Partial<T> {
+  const result: Record<string, unknown> = {};
+  Object.entries(data).forEach(([key, value]) => {
+    if (!FOREIGN_FORBIDDEN_FIELDS.includes(key)) result[key] = value;
+  });
+  return result as Partial<T>;
 }

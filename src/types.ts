@@ -126,8 +126,14 @@ export interface Patient {
   therapistName?: string;
   // Whitelabels com acesso ao paciente e ao prontuário (máximo 3).
   sharedWith?: string[];
+  // Nível de acesso de cada destino em sharedWith; ausente = PADRAO.
+  sharedAccess?: Record<string, ShareLevel>;
+  // Só na cópia do destino (sharedPatients): o nível dele neste paciente.
+  accessLevel?: ShareLevel;
   createdAt?: any;
 }
+
+export type ShareLevel = 'LEITURA' | 'PADRAO' | 'EDICAO';
 
 export interface Evolution {
   id?: string;

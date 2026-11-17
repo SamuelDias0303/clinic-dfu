@@ -3,7 +3,7 @@ import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
-import { allowedShareTargets, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
+import { allowedShareTargets, stripForeignEditFields, canEditSharedPatient, canWriteClinical, levelOf, normalizeAccess, patientLevel, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -272,3 +272,36 @@ assert.equal(
   'e9',
 );
 console.log('OK: meu dia compartilhado.');
+
+// Níveis de acesso do compartilhamento.
+assert.equal(levelOf(undefined, 'B'), 'PADRAO');
+assert.equal(levelOf({ B: 'LEITURA' }, 'B'), 'LEITURA');
+assert.equal(levelOf({ B: 'LEITURA' }, 'C'), 'PADRAO');
+assert.equal(canWriteClinical('LEITURA'), false);
+assert.equal(canWriteClinical('PADRAO'), true);
+assert.equal(canWriteClinical('EDICAO'), true);
+assert.equal(canEditSharedPatient('PADRAO'), false);
+assert.equal(canEditSharedPatient('EDICAO'), true);
+// Paciente do próprio whitelabel nunca é limitado; o compartilhado usa o nível da cópia (sem nível = padrão).
+assert.equal(patientLevel({ whitelabelId: 'A' }, 'A'), 'EDICAO');
+assert.equal(patientLevel({ whitelabelId: 'B', accessLevel: 'LEITURA' }, 'A'), 'LEITURA');
+assert.equal(patientLevel({ whitelabelId: 'B' }, 'A'), 'PADRAO');
+// Só chaves que ainda estão em sharedWith e níveis válidos sobrevivem.
+assert.deepEqual(
+  normalizeAccess(['B', 'C'], { B: 'LEITURA', X: 'EDICAO', C: 'NADA' as never }),
+  { B: 'LEITURA' },
+);
+assert.deepEqual(normalizeAccess([], { B: 'LEITURA' }), {});
+// A cópia do destino leva o nível e não leva o mapa do original.
+const leveled = buildPatientCopy({ id: 'p9', name: 'X', cpf: '', birthDate: '', phone: '', email: '', healthPlan: '', address: '', status: 'Ativo', sharedWith: ['B'], sharedAccess: { B: 'LEITURA' } }, 'A', 'LEITURA');
+assert.equal(leveled.accessLevel, 'LEITURA');
+assert.equal('sharedAccess' in leveled, false);
+
+console.log('OK: niveis de acesso do compartilhamento.');
+
+// Edição do cadastro pelo destino (nível EDICAO): só campos do cadastro seguem; compartilhamento, nível, terapeuta e sistema ficam de fora.
+assert.deepEqual(
+  stripForeignEditFields({ id: 'p', name: 'N', phone: '1', whitelabelId: 'A', sharedWith: ['B'], sharedAccess: { B: 'EDICAO' }, accessLevel: 'EDICAO', therapistId: 't', therapistName: 'T', createdAt: 1, ownerWhitelabelId: 'A', patientId: 'p' } as never),
+  { name: 'N', phone: '1' },
+);
+console.log('OK: edicao pelo destino.');

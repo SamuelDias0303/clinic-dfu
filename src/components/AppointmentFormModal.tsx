@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Calendar, ClipboardList, Clock, FileText, Loader2, Package as PackageIcon, Search, Trash2, User, Users, X } from 'lucide-react';
 import { Appointment, Package as PackageRecord, Patient, WhitelabelLinks } from '../types';
 import { packageProgress } from '../lib/packageProgress';
-import { allowedShareTargets, isForeignPatient, packagesForTherapist } from '../lib/sharing';
+import { allowedShareTargets, canWriteClinical, isForeignPatient, packagesForTherapist, patientLevel } from '../lib/sharing';
 import { whitelabelLinksService } from '../services/whitelabelLinksService';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { packageService } from '../services/packageService';
@@ -207,7 +207,9 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
     const matchesTherapist = !formData.therapistId
       || p.therapistId === formData.therapistId
       || (!!user?.activeWhitelabelId && isForeignPatient(p, user.activeWhitelabelId));
-    return matchesSearch && matchesTherapist;
+    // Paciente compartilhado em só leitura não pode ser agendado aqui.
+    const canSchedule = !user?.activeWhitelabelId || canWriteClinical(patientLevel(p, user.activeWhitelabelId));
+    return matchesSearch && matchesTherapist && canSchedule;
   });
 
   const handleDayToggle = (day: number) => {

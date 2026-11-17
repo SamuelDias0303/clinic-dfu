@@ -10,7 +10,7 @@ import PatientFormModal from '../components/PatientFormModal';
 import ConfirmModal from '../components/ConfirmModal';
 import AssignTherapistModal from '../components/AssignTherapistModal';
 import SharePatientsModal from '../components/SharePatientsModal';
-import { allowedShareTargets, isForeignPatient } from '../lib/sharing';
+import { SHARE_LEVEL_LABELS, allowedShareTargets, canEditSharedPatient, isForeignPatient, patientLevel, stripForeignEditFields } from '../lib/sharing';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { isUnassigned } from '../lib/clinicalHelpers';
 
@@ -65,10 +65,19 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
     await patientService.createPatient(data, user?.activeWhitelabelId);
   };
 
+  const canEditPatient = (patient: Patient) =>
+    !isForeignPatient(patient, activeWhitelabelId)
+    || (canEditSharedPatient(patientLevel(patient, activeWhitelabelId))
+      && (user?.activeRole === 'GESTOR' || user?.activeRole === 'REPCAO' || user?.activeRole === 'ADMIN_GLOBAL'));
+
   const handleUpdatePatient = async (data: Omit<Patient, 'id' | 'createdAt'>) => {
-    if (editingPatient?.id) {
-      await patientService.updatePatient(editingPatient.id, data, user?.activeWhitelabelId);
+    if (!editingPatient?.id) return;
+    if (isForeignPatient(editingPatient, activeWhitelabelId)) {
+      // Paciente de outro whitelabel: grava na origem só o cadastro e atualiza a cópia daqui.
+      await patientService.updatePatient(editingPatient.id, stripForeignEditFields(data), editingPatient.whitelabelId, { copyInWhitelabelId: activeWhitelabelId });
+      return;
     }
+    await patientService.updatePatient(editingPatient.id, data, user?.activeWhitelabelId);
   };
 
   const handleDeletePatient = async (id: string) => {
@@ -212,7 +221,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                           <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
                           {patient.cpf && <div className="text-xs text-slate-500 dark:text-slate-400">CPF: {patient.cpf}</div>}
                           {isForeignPatient(patient, activeWhitelabelId) ? (
-                            <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado</span>
+                            <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado · {SHARE_LEVEL_LABELS[patientLevel(patient, activeWhitelabelId)].toLowerCase()}</span>
                           ) : (patient.sharedWith ?? []).length > 0 && (
                             <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary" title={(patient.sharedWith ?? []).map(nameOfWhitelabel).join(', ')}>
                               Compartilhado com {(patient.sharedWith ?? []).length}
@@ -251,19 +260,21 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                         >
                           <FileText size={18} />
                         </button>
+                        {canEditPatient(patient) && (
+                          <button
+                            onClick={() => {
+                              setEditingPatient(patient);
+                              setIsModalOpen(true);
+                            }}
+                            className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
+                            title="Editar"
+                            aria-label={`Editar ${patient.name}`}
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        )}
                         {!isForeignPatient(patient, activeWhitelabelId) && (
                           <>
-                            <button
-                              onClick={() => {
-                                setEditingPatient(patient);
-                                setIsModalOpen(true);
-                              }}
-                              className="p-2 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all dark:text-slate-400"
-                              title="Editar"
-                              aria-label={`Editar ${patient.name}`}
-                            >
-                              <Edit2 size={18} />
-                            </button>
                             <button
                               onClick={() => handleDeletePatient(patient.id!)}
                               className="p-2 text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:text-slate-400 dark:hover:bg-rose-900/20 rounded-lg transition-all"
@@ -301,7 +312,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                       <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{patient.name}</div>
                       {patient.cpf && <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-wider">CPF: {patient.cpf}</div>}
                       {isForeignPatient(patient, activeWhitelabelId) ? (
-                        <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado</span>
+                        <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Compartilhado · {SHARE_LEVEL_LABELS[patientLevel(patient, activeWhitelabelId)].toLowerCase()}</span>
                       ) : (patient.sharedWith ?? []).length > 0 && (
                         <span className="mt-0.5 inline-block rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                           Compartilhado com {(patient.sharedWith ?? []).length}
@@ -345,18 +356,20 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                     <FileText size={14} />
                     Prontuário
                   </button>
+                  {canEditPatient(patient) && (
+                    <button
+                      onClick={() => {
+                        setEditingPatient(patient);
+                        setIsModalOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs font-bold"
+                    >
+                      <Edit2 size={14} />
+                      Editar
+                    </button>
+                  )}
                   {!isForeignPatient(patient, activeWhitelabelId) && (
                     <>
-                      <button
-                        onClick={() => {
-                          setEditingPatient(patient);
-                          setIsModalOpen(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-xs font-bold"
-                      >
-                        <Edit2 size={14} />
-                        Editar
-                      </button>
                       <button
                         onClick={() => handleDeletePatient(patient.id!)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded-lg text-xs font-bold"

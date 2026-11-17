@@ -19,7 +19,7 @@ import { appointmentService } from '../services/appointmentService';
 import { packageService } from '../services/packageService';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { whitelabelLinksService } from '../services/whitelabelLinksService';
-import { allowedShareTargets, visibleExternalAppointments } from '../lib/sharing';
+import { allowedShareTargets, canWriteClinical, patientLevel, visibleExternalAppointments } from '../lib/sharing';
 import { Patient, Appointment, Package, WhitelabelLinks } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -183,6 +183,10 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
             todayAppointments={todayAppointments}
             externalAppointments={todayExternal}
             sourceNameOf={sourceNameOf}
+            canEvolveExternal={(appointment) => {
+              const patient = findPatient(appointment);
+              return !!patient && !!user?.activeWhitelabelId && canWriteClinical(patientLevel(patient, user.activeWhitelabelId));
+            }}
             pendingEvolutions={pendingBefore.slice(0, 8)}
             pendingTotal={pendingBefore.length}
             showTherapist={user?.activeRole !== 'TERAPEUTA'}

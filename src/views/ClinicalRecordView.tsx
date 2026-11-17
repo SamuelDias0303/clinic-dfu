@@ -22,7 +22,7 @@ import { Patient, Evolution, Anamnese, Appointment } from '../types';
 import { clinicalRecordService } from '../services/clinicalRecordService';
 import { appointmentService } from '../services/appointmentService';
 import { formatAge } from '../lib/clinicalHelpers';
-import { isForeignPatient } from '../lib/sharing';
+import { SHARE_LEVEL_LABELS, canWriteClinical, isForeignPatient, patientLevel } from '../lib/sharing';
 import PatientPackagesCard from '../components/PatientPackagesCard';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -38,7 +38,10 @@ type Tab = 'HISTORICO' | 'ANAMNESE' | 'EVOLUIR' | 'GRAVACAO' | 'IMAGENS';
 
 export default function ClinicalRecordView({ patient, onBack, appointment }: ClinicalRecordViewProps) {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<Tab>(appointment ? 'EVOLUIR' : 'HISTORICO');
+  // Nível de acesso no paciente compartilhado: só leitura vê tudo e não grava evolução nem anamnese.
+  const level = user?.activeWhitelabelId ? patientLevel(patient, user.activeWhitelabelId) : 'EDICAO';
+  const readOnly = !canWriteClinical(level);
+  const [activeTab, setActiveTab] = useState<Tab>(appointment && !readOnly ? 'EVOLUIR' : 'HISTORICO');
   const [linkedAppointment, setLinkedAppointment] = useState<Appointment | null>(appointment ?? null);
   const [linkedEvolutionId, setLinkedEvolutionId] = useState<string | undefined>(undefined);
   const age = formatAge(patient.birthDate);
@@ -56,9 +59,11 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
   const [editingContent, setEditingContent] = useState('');
 
   const canManageEvolution =
-    user?.activeRole === 'ADMIN_GLOBAL' ||
-    user?.activeRole === 'GESTOR' ||
-    user?.activeRole === 'TERAPEUTA';
+    !readOnly && (
+      user?.activeRole === 'ADMIN_GLOBAL' ||
+      user?.activeRole === 'GESTOR' ||
+      user?.activeRole === 'TERAPEUTA'
+    );
   const [anamneseForm, setAnamneseForm] = useState({
     diagnosis: '',
     mainComplaint: '',
@@ -216,7 +221,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
     { id: 'EVOLUIR', label: 'EVOLUIR', icon: PenTool },
     { id: 'GRAVACAO', label: 'GRAVAÇÃO', icon: Mic },
     { id: 'IMAGENS', label: 'IMAGENS', icon: ImageIcon },
-  ];
+  ].filter((tab) => !(readOnly && tab.id === 'EVOLUIR'));
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -240,7 +245,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
             <div className="flex-1">
               <h3 className="text-2xl font-bold text-primary uppercase">{patient.name}</h3>
               {isShared && (
-                <span className="mt-1 inline-block rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">Paciente compartilhado</span>
+                <span className="mt-1 inline-block rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">Paciente compartilhado · {SHARE_LEVEL_LABELS[level].toLowerCase()}</span>
               )}
               {patient.cpf && <p className="text-slate-500 dark:text-slate-400 font-bold mt-1">CPF: {patient.cpf}</p>}
 
@@ -310,7 +315,7 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
         </div>
       </div>
 
-      {patient.id && <PatientPackagesCard patientId={patient.id} patientWhitelabelId={isShared ? patient.whitelabelId : undefined} />}
+      {patient.id && !readOnly && <PatientPackagesCard patientId={patient.id} patientWhitelabelId={isShared ? patient.whitelabelId : undefined} />}
 
       {/* Evoluções Section */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm p-6 transition-all duration-300">
@@ -489,14 +494,18 @@ export default function ClinicalRecordView({ patient, onBack, appointment }: Cli
                   </div>
 
                   <div className="flex justify-end pt-4">
-                    <button 
-                      onClick={handleSaveAnamnese}
-                      disabled={saving}
-                      className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-                      SALVAR ANAMNESE
-                    </button>
+                    {readOnly ? (
+                      <p className="text-xs font-bold text-slate-400">Acesso somente leitura: a anamnese não pode ser alterada.</p>
+                    ) : (
+                      <button
+                        onClick={handleSaveAnamnese}
+                        disabled={saving}
+                        className="flex items-center gap-2 px-8 py-3 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                        SALVAR ANAMNESE
+                      </button>
+                    )}
                   </div>
                 </motion.div>
               )}

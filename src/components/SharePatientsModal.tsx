@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, Search, X } from 'lucide-react';
 import { motion } from 'motion/react';
-import { MAX_SHARED_WHITELABELS, clampShareTargets } from '../lib/sharing';
-import { Patient } from '../types';
+import { MAX_SHARED_WHITELABELS, SHARE_LEVELS, SHARE_LEVEL_LABELS, clampShareTargets, levelOf, normalizeAccess } from '../lib/sharing';
+import { Patient, ShareLevel } from '../types';
 
 type SavedPatient = Patient & { id: string };
 
@@ -12,7 +12,7 @@ interface SharePatientsModalProps {
   // Só pacientes deste whitelabel (os recebidos de outro não entram).
   patients: SavedPatient[];
   targets: { id: string; name: string; slug: string }[];
-  onConfirm: (changes: { patient: SavedPatient; sharedWith: string[] }[]) => Promise<void>;
+  onConfirm: (changes: { patient: SavedPatient; sharedWith: string[]; sharedAccess: Record<string, ShareLevel> }[]) => Promise<void>;
 }
 
 type Mode = 'SHARE' | 'UNSHARE';
@@ -21,6 +21,8 @@ export default function SharePatientsModal({ isOpen, onClose, patients, targets,
   const [mode, setMode] = useState<Mode>('SHARE');
   const [targetIds, setTargetIds] = useState<string[]>([]);
   const [patientIds, setPatientIds] = useState<string[]>([]);
+  // Nível aplicado aos destinos marcados ao compartilhar (também troca o nível de quem já recebe).
+  const [level, setLevel] = useState<ShareLevel>('PADRAO');
   const [search, setSearch] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -36,10 +38,21 @@ export default function SharePatientsModal({ isOpen, onClose, patients, targets,
     ? clampShareTargets([...(patient.sharedWith ?? []), ...targetIds], allowedIds)
     : (patient.sharedWith ?? []).filter((id) => !targetIds.includes(id));
 
+  const nextAccess = (patient: SavedPatient, sharedWith: string[]) => {
+    const access = { ...(patient.sharedAccess ?? {}) };
+    if (mode === 'SHARE') targetIds.forEach((id) => { access[id] = level; });
+    return normalizeAccess(sharedWith, access);
+  };
+
   const changes = patients
     .filter((patient) => patientIds.includes(patient.id))
-    .map((patient) => ({ patient, sharedWith: nextList(patient) }))
-    .filter(({ patient, sharedWith }) => sharedWith.join('|') !== (patient.sharedWith ?? []).join('|'));
+    .map((patient) => {
+      const sharedWith = nextList(patient);
+      return { patient, sharedWith, sharedAccess: nextAccess(patient, sharedWith) };
+    })
+    .filter(({ patient, sharedWith, sharedAccess }) =>
+      sharedWith.join('|') !== (patient.sharedWith ?? []).join('|')
+      || JSON.stringify(sharedAccess) !== JSON.stringify(normalizeAccess(patient.sharedWith ?? [], patient.sharedAccess)));
 
   // Pacientes que passariam de 3 destinos (clampShareTargets corta): avisa antes de salvar.
   const overLimit = mode === 'SHARE' && patients
@@ -119,6 +132,33 @@ export default function SharePatientsModal({ isOpen, onClose, patients, targets,
             </div>
           </div>
 
+          {mode === 'SHARE' && (
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase text-slate-500">Nível de acesso</p>
+              <div className="flex flex-wrap gap-2">
+                {SHARE_LEVELS.map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setLevel(value)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors ${
+                      level === value
+                        ? 'border-primary bg-primary text-white'
+                        : 'border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {SHARE_LEVEL_LABELS[value]}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                {level === 'LEITURA' && 'Vê o cadastro e o prontuário. Não agenda, não evolui, não edita.'}
+                {level === 'PADRAO' && 'Vê, agenda e registra evolução e anamnese. Não edita o cadastro.'}
+                {level === 'EDICAO' && 'Tudo do padrão e também edita o cadastro do paciente.'}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="mb-2 text-xs font-bold uppercase text-slate-500">Pacientes ({patientIds.length} selecionados)</p>
             <div className="relative mb-2">
@@ -142,7 +182,9 @@ export default function SharePatientsModal({ isOpen, onClose, patients, targets,
                     />
                     <span className="font-medium text-slate-900 dark:text-white">{patient.name}</span>
                     {(patient.sharedWith ?? []).length > 0 && (
-                      <span className="text-xs text-slate-400">com {(patient.sharedWith ?? []).map(nameOf).join(', ')}</span>
+                      <span className="text-xs text-slate-400">
+                        com {(patient.sharedWith ?? []).map((id) => `${nameOf(id)} (${SHARE_LEVEL_LABELS[levelOf(patient.sharedAccess, id)].toLowerCase()})`).join(', ')}
+                      </span>
                     )}
                   </label>
                 </li>

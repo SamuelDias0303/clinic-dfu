@@ -14,9 +14,9 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { toFirestoreData } from '../lib/firestoreData';
-import { buildPatientCopy, buildSharedWithAudit, copyTargetsDiff } from '../lib/sharing';
+import { buildPatientCopy, buildSharedWithAudit, copyTargetsDiff, levelOf, normalizeAccess } from '../lib/sharing';
 import { tenantCollectionPath, TENANT_COLLECTIONS } from '../lib/tenantPaths';
-import { Patient } from '../types';
+import { Patient, ShareLevel } from '../types';
 import { appointmentService } from './appointmentService';
 import { COLLECTIONS, isLegacyWhitelabel, scopedCollection, scopedDoc, sharedCopyDoc, withTenantField } from './serviceScope';
 
@@ -90,9 +90,19 @@ export const patientService = {
     return { motherName: patch.motherName !== undefined, address: patch.address !== undefined };
   },
 
-  async updatePatient(id: string, patient: Partial<Patient>, whitelabelId?: string | null) {
+  /**
+   * `copyInWhitelabelId`: edição feita por um destino (nível EDICAO). Só a cópia dele atualiza na hora;
+   * as dos outros destinos só o gestor da origem grava.
+   */
+  async updatePatient(id: string, patient: Partial<Patient>, whitelabelId?: string | null, options?: { copyInWhitelabelId?: string }) {
     const docRef = scopedDoc(COLLECTIONS.patients, id, whitelabelId);
     await updateDoc(docRef, withTenantField(patient, whitelabelId));
+
+    if (options?.copyInWhitelabelId && whitelabelId) {
+      await updateDoc(sharedCopyDoc(TENANT_COLLECTIONS.sharedPatients, options.copyInWhitelabelId, whitelabelId, id), toFirestoreData({ ...patient }))
+        .catch((error) => console.warn('Não foi possível atualizar a cópia do paciente neste whitelabel:', error));
+      return;
+    }
 
     if (whitelabelId && !isLegacyWhitelabel(whitelabelId)) {
       const saved = await getDoc(docRef);
@@ -124,7 +134,7 @@ export const patientService = {
     (patient.sharedWith ?? []).forEach((target) => {
       batch.set(
         sharedCopyDoc(TENANT_COLLECTIONS.sharedPatients, target, whitelabelId, patient.id),
-        toFirestoreData(buildPatientCopy(patient, whitelabelId)),
+        toFirestoreData(buildPatientCopy(patient, whitelabelId, levelOf(patient.sharedAccess, target))),
       );
     });
     await batch.commit();
@@ -135,21 +145,22 @@ export const patientService = {
    * cópias no destino e registra auditoria, tudo em lote (as regras conferem pelo estado final).
    */
   async setSharedWith(
-    changes: { patient: SavedPatient; sharedWith: string[] }[],
+    changes: { patient: SavedPatient; sharedWith: string[]; sharedAccess?: Record<string, ShareLevel> }[],
     whitelabelId: string,
     actor: { uid: string; email: string },
   ) {
     const CHUNK = 80;
     for (let start = 0; start < changes.length; start += CHUNK) {
       const batch = writeBatch(db);
-      changes.slice(start, start + CHUNK).forEach(({ patient, sharedWith }) => {
+      changes.slice(start, start + CHUNK).forEach(({ patient, sharedWith, sharedAccess }) => {
         const { remove } = copyTargetsDiff(patient.sharedWith, sharedWith);
-        batch.update(scopedDoc(COLLECTIONS.patients, patient.id, whitelabelId), { sharedWith });
-        const next = { ...patient, sharedWith };
+        const access = normalizeAccess(sharedWith, sharedAccess ?? patient.sharedAccess);
+        batch.update(scopedDoc(COLLECTIONS.patients, patient.id, whitelabelId), { sharedWith, sharedAccess: access });
+        const next = { ...patient, sharedWith, sharedAccess: access };
         sharedWith.forEach((target) => {
           batch.set(
             sharedCopyDoc(TENANT_COLLECTIONS.sharedPatients, target, whitelabelId, patient.id),
-            toFirestoreData(buildPatientCopy(next, whitelabelId)),
+            toFirestoreData(buildPatientCopy(next, whitelabelId, levelOf(access, target))),
           );
         });
         remove.forEach((target) => {

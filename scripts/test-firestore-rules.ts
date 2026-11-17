@@ -32,6 +32,11 @@ async function main() {
       whitelabelId: 'A', patientId: 'p1', therapistId: 'terapA', sharedToWhitelabels: ['B'],
     });
     await setDoc(doc(db, 'whitelabels/A/appointments/a2'), { whitelabelId: 'A', patientId: 'p1', therapistId: 'terapA' });
+    await setDoc(doc(db, 'whitelabels/A/patients/p5'), { whitelabelId: 'A', name: 'P5 leitura', sharedWith: ['B'], sharedAccess: { B: 'LEITURA' } });
+    await setDoc(doc(db, 'whitelabels/A/patients/p6'), { whitelabelId: 'A', name: 'P6 edicao', sharedWith: ['B'], sharedAccess: { B: 'EDICAO' }, therapistId: 'terapA' });
+    await setDoc(doc(db, 'whitelabels/A/patients/p8'), { whitelabelId: 'A', name: 'P8', sharedWith: ['B'] });
+    await setDoc(doc(db, 'whitelabels/A/patients/p9'), { whitelabelId: 'A', name: 'P9 sem compartilhar' });
+    await setDoc(doc(db, 'whitelabels/B/sharedPatients/A__p6'), { ownerWhitelabelId: 'A', patientId: 'p6', name: 'P6 edicao', accessLevel: 'EDICAO' });
     await setDoc(doc(db, 'patients/legado'), { name: 'Legado', sharedWith: ['B'], whitelabelId: 'A' });
   });
 
@@ -134,6 +139,50 @@ async function main() {
   await check('destino liga evolutionId só na própria cópia', async () => {
     await assertSucceeds(updateDoc(doc(as('gestorB'), 'whitelabels/B/sharedAppointments/A__a1'), { evolutionId: 'e1' }));
     await assertFails(updateDoc(doc(as('gestorB'), 'whitelabels/B/sharedAppointments/A__a1'), { status: 'CONCLUÍDO' }));
+  });
+  // Níveis de acesso.
+  await check('gestor da origem define o nível de um destino compartilhado', () =>
+    assertSucceeds(updateDoc(doc(as('gestorA'), 'whitelabels/A/patients/p8'), { sharedAccess: { B: 'LEITURA' } })));
+  await check('recepção da origem não muda o nível', () =>
+    assertFails(updateDoc(doc(as('recepA'), 'whitelabels/A/patients/p8'), { sharedAccess: { B: 'EDICAO' } })));
+  await check('nível para whitelabel fora do sharedWith falha', () =>
+    assertFails(updateDoc(doc(as('gestorA'), 'whitelabels/A/patients/p8'), { sharedAccess: { C: 'LEITURA' } })));
+  await check('nível inválido falha', () =>
+    assertFails(updateDoc(doc(as('gestorA'), 'whitelabels/A/patients/p8'), { sharedAccess: { B: 'SUPER' } })));
+  await check('só leitura: destino lê o prontuário', () =>
+    assertSucceeds(getDocs(query(collection(as('gestorB'), 'whitelabels/A/evolutions'), where('patientId', '==', 'p5')))));
+  await check('só leitura: destino não grava evolução', () =>
+    assertFails(setDoc(doc(as('terapB'), 'whitelabels/A/evolutions/e5'), { whitelabelId: 'A', patientId: 'p5', therapistId: 'terapB', content: 'z' })));
+  await check('só leitura: destino não grava anamnese', () =>
+    assertFails(setDoc(doc(as('terapB'), 'whitelabels/A/anamneses/n5'), { whitelabelId: 'A', patientId: 'p5', mainComplaint: 'x' })));
+  await check('padrão: destino grava anamnese', () =>
+    assertSucceeds(setDoc(doc(as('terapB'), 'whitelabels/A/anamneses/n1'), { whitelabelId: 'A', patientId: 'p1', mainComplaint: 'x' })));
+  await check('edição: destino grava evolução', () =>
+    assertSucceeds(setDoc(doc(as('terapB'), 'whitelabels/A/evolutions/e6'), { whitelabelId: 'A', patientId: 'p6', therapistId: 'terapB', content: 'y' })));
+  await check('só leitura: destino não agenda o paciente', () =>
+    assertFails(setDoc(doc(as('gestorB'), 'whitelabels/B/appointments/b1'), { whitelabelId: 'B', patientId: 'p5', patientWhitelabelId: 'A', therapistId: 'terapB' })));
+  await check('padrão: destino agenda o paciente', () =>
+    assertSucceeds(setDoc(doc(as('gestorB'), 'whitelabels/B/appointments/b2'), { whitelabelId: 'B', patientId: 'p1', patientWhitelabelId: 'A', therapistId: 'terapB' })));
+  await check('destino não agenda paciente que não foi compartilhado', () =>
+    assertFails(setDoc(doc(as('gestorB'), 'whitelabels/B/appointments/b3'), { whitelabelId: 'B', patientId: 'p9', patientWhitelabelId: 'A', therapistId: 'terapB' })));
+  await check('edição: recepção e gestor do destino editam o cadastro', async () => {
+    await assertSucceeds(updateDoc(doc(as('recepB'), 'whitelabels/A/patients/p6'), { name: 'P6 novo' }));
+    await assertSucceeds(updateDoc(doc(as('gestorB'), 'whitelabels/A/patients/p6'), { phone: '1199' }));
+  });
+  await check('edição: terapeuta do destino não edita o cadastro', () =>
+    assertFails(updateDoc(doc(as('terapB'), 'whitelabels/A/patients/p6'), { name: 'Outro' })));
+  await check('padrão e só leitura: destino não edita o cadastro', async () => {
+    await assertFails(updateDoc(doc(as('recepB'), 'whitelabels/A/patients/p1'), { name: 'Outro' }));
+    await assertFails(updateDoc(doc(as('recepB'), 'whitelabels/A/patients/p5'), { name: 'Outro' }));
+  });
+  await check('edição: destino não muda compartilhamento, nível nem terapeuta', async () => {
+    await assertFails(updateDoc(doc(as('gestorB'), 'whitelabels/A/patients/p6'), { sharedWith: ['B', 'C'] }));
+    await assertFails(updateDoc(doc(as('gestorB'), 'whitelabels/A/patients/p6'), { sharedAccess: { B: 'LEITURA' } }));
+    await assertFails(updateDoc(doc(as('gestorB'), 'whitelabels/A/patients/p6'), { therapistId: 'terapB' }));
+  });
+  await check('edição: destino atualiza a própria cópia, sem mexer no nível', async () => {
+    await assertSucceeds(updateDoc(doc(as('recepB'), 'whitelabels/B/sharedPatients/A__p6'), { name: 'P6 novo' }));
+    await assertFails(updateDoc(doc(as('recepB'), 'whitelabels/B/sharedPatients/A__p6'), { accessLevel: 'LEITURA' }));
   });
   await check('coleção raiz legada de pacientes continua negada', () =>
     assertFails(getDoc(doc(as('gestorB'), 'patients/legado'))));
