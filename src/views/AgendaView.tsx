@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Loader2, Plus, Trash2 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Appointment, Patient } from '../types';
+import { Appointment, Patient, WhitelabelLinks } from '../types';
 import { appointmentService } from '../services/appointmentService';
+import { whitelabelLinksService } from '../services/whitelabelLinksService';
+import { isLegacyWhitelabel } from '../services/serviceScope';
+import { allowedShareTargets } from '../lib/sharing';
 import { useAuth } from '../contexts/AuthContext';
 import AppointmentFormModal from '../components/AppointmentFormModal';
 import DeleteAppointmentModal from '../components/DeleteAppointmentModal';
@@ -67,6 +70,23 @@ function AppointmentCard({ appointment, onEdit, onDelete, showTherapist }: Appoi
   );
 }
 
+// Agendamento marcado por outro whitelabel para aparecer aqui: só leitura, fora de qualquer contagem.
+function ExternalAppointmentCard({ appointment, sourceName }: { key?: React.Key; appointment: Appointment; sourceName: string }) {
+  return (
+    <div
+      className="z-10 flex w-full flex-col justify-between rounded-lg border border-dashed border-slate-300 bg-slate-50 p-1.5 text-[11px] text-slate-600 dark:border-slate-600 dark:bg-slate-800/60 dark:text-slate-300 lg:p-2 lg:text-xs"
+      title={`Compartilhado por ${sourceName}`}
+    >
+      <div className="min-w-0 overflow-hidden">
+        <div className="line-clamp-2 font-bold leading-tight">{appointment.patientName}</div>
+        <div className="mt-0.5 truncate font-medium opacity-80">{appointment.type}</div>
+        <div className="mt-0.5 truncate text-[10px] italic opacity-70">{sourceName}</div>
+      </div>
+      <span className="mt-1 font-bold tabular-nums">{appointment.time}</span>
+    </div>
+  );
+}
+
 interface AgendaViewProps {
   // Quando vem do Painel, a Agenda lista os agendamentos desse paciente em vez da grade.
   patient?: Patient | null;
@@ -77,6 +97,8 @@ interface AgendaViewProps {
 export default function AgendaView({ patient, onClearPatient, onBackToDashboard }: AgendaViewProps = {}) {
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [externalAppointments, setExternalAppointments] = useState<Appointment[]>([]);
+  const [links, setLinks] = useState<WhitelabelLinks | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | undefined>(undefined);
   const [loading, setLoading] = useState(true);
@@ -98,8 +120,20 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
       setLoading(false);
     }, filterId, whitelabelId);
 
-    return () => unsubscribe();
+    // Blocos de outros whitelabels (cópias-índice) e vínculos só existem em whitelabels reais.
+    const real = !!whitelabelId && !isLegacyWhitelabel(whitelabelId);
+    const unsubscribeExternal = real ? appointmentService.subscribeToSharedAppointments(whitelabelId, setExternalAppointments) : () => {};
+    const unsubscribeLinks = real ? whitelabelLinksService.subscribe(whitelabelId, setLinks) : () => {};
+
+    return () => {
+      unsubscribe();
+      unsubscribeExternal();
+      unsubscribeLinks();
+    };
   }, [user]);
+
+  const sourceNameOf = (appointment: Appointment) =>
+    allowedShareTargets(links).find((target) => target.id === appointment.whitelabelId)?.name ?? 'Outra clínica';
 
   // A grade começa às 07:00; abre já na hora atual para não rolar até achar o agora.
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -185,6 +219,12 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
     const dateStr = formatDateLocal(date);
     const hourPrefix = hour.substring(0, 2);
     return appointments.filter(appointment => appointment.date === dateStr && appointment.time.startsWith(hourPrefix));
+  };
+
+  const getExternalForSlot = (date: Date, hour: string) => {
+    const dateStr = formatDateLocal(date);
+    const hourPrefix = hour.substring(0, 2);
+    return externalAppointments.filter(appointment => appointment.date === dateStr && appointment.time.startsWith(hourPrefix));
   };
 
   const movePeriod = (direction: 1 | -1) => {
@@ -317,6 +357,8 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
         <DayAppointmentsList
           date={currentDate}
           appointments={appointments.filter(appointment => appointment.date === formatDateLocal(currentDate))}
+          externalAppointments={externalAppointments.filter(appointment => appointment.date === formatDateLocal(currentDate))}
+          sourceNameOf={sourceNameOf}
           showTherapist={user?.activeRole === 'GESTOR'}
           onEdit={(appointment) => {
             setEditingAppointment(appointment);
@@ -361,8 +403,12 @@ export default function AgendaView({ patient, onClearPatient, onBackToDashboard 
                   </div>
                   {weekDays.map(date => {
                     const slotAppointments = getAppointmentsForSlot(date, hour);
+                    const slotExternal = getExternalForSlot(date, hour);
                     return (
                       <div key={`${date.toISOString()}-${hour}`} className="group/slot relative flex min-h-[72px] flex-col gap-1 border-r border-slate-50 p-0.5 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50 lg:min-h-[80px] lg:p-1">
+                        {slotExternal.map(appointment => (
+                          <ExternalAppointmentCard key={`ext-${appointment.whitelabelId}-${appointment.id}`} appointment={appointment} sourceName={sourceNameOf(appointment)} />
+                        ))}
                         {slotAppointments.length > 0 ? (
                           slotAppointments.map(appointment => (
                             <AppointmentCard

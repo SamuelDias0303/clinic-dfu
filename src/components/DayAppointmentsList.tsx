@@ -13,6 +13,9 @@ interface DayAppointmentsListProps {
   date: Date;
   // Só os agendamentos deste dia.
   appointments: Appointment[];
+  // Blocos de outros whitelabels: só leitura, fora do "Próximo" e de qualquer contagem.
+  externalAppointments?: Appointment[];
+  sourceNameOf?: (appointment: Appointment) => string;
   showTherapist: boolean;
   onEdit: (appointment: Appointment) => void;
   onNew: () => void;
@@ -20,7 +23,7 @@ interface DayAppointmentsListProps {
 
 // A visão por dia lista só o que existe: a grade de 14 horas vazias exigia rolar a tela
 // inteira no celular para achar dois agendamentos.
-export default function DayAppointmentsList({ date, appointments, showTherapist, onEdit, onNew }: DayAppointmentsListProps) {
+export default function DayAppointmentsList({ date, appointments, externalAppointments = [], sourceNameOf, showTherapist, onEdit, onNew }: DayAppointmentsListProps) {
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
   const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -45,7 +48,7 @@ export default function DayAppointmentsList({ date, appointments, showTherapist,
         </p>
       </div>
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && externalAppointments.length === 0 ? (
         <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
           <p className="text-sm text-slate-400 dark:text-slate-500">Nenhum agendamento neste dia.</p>
           <button
@@ -58,6 +61,20 @@ export default function DayAppointmentsList({ date, appointments, showTherapist,
         </div>
       ) : (
         <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+          {[...externalAppointments].sort((a, b) => a.time.localeCompare(b.time)).map((appointment) => (
+            <li key={`ext-${appointment.whitelabelId}-${appointment.id}`} className="flex items-center justify-between gap-3 bg-slate-50/70 px-4 py-3 dark:bg-slate-800/40 sm:px-6">
+              <div className="flex min-w-0 items-center gap-4">
+                <span className="w-12 shrink-0 text-sm font-bold tabular-nums text-slate-500 dark:text-slate-400">{appointment.time}</span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-600 dark:text-slate-300">{appointment.patientName}</p>
+                  <p className="truncate text-xs text-slate-500 dark:text-slate-400">{appointment.type}</p>
+                </div>
+              </div>
+              <span className="shrink-0 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-[10px] font-bold text-slate-500 dark:border-slate-600 dark:text-slate-400">
+                {sourceNameOf?.(appointment) ?? 'Outra clínica'}
+              </span>
+            </li>
+          ))}
           {rows.map((appointment) => (
             <li key={appointment.id}>
               <button

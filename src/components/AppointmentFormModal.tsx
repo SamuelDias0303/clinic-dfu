@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Calendar, ClipboardList, Clock, FileText, Loader2, Package as PackageIcon, Search, Trash2, User, Users, X } from 'lucide-react';
-import { Appointment, Package as PackageRecord, Patient } from '../types';
+import { Appointment, Package as PackageRecord, Patient, WhitelabelLinks } from '../types';
 import { packageProgress } from '../lib/packageProgress';
+import { allowedShareTargets, isForeignPatient } from '../lib/sharing';
+import { whitelabelLinksService } from '../services/whitelabelLinksService';
+import { isLegacyWhitelabel } from '../services/serviceScope';
 import { packageService } from '../services/packageService';
 import { patientService } from '../services/patientService';
 import { therapistService, Therapist } from '../services/therapistService';
@@ -35,7 +38,10 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [ownPatients, setPatients] = useState<Patient[]>([]);
+  const [sharedPatients, setSharedPatients] = useState<Patient[]>([]);
+  const [links, setLinks] = useState<WhitelabelLinks | null>(null);
+  const patients = [...ownPatients, ...sharedPatients];
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isPatientListOpen, setIsPatientListOpen] = useState(false);
@@ -53,6 +59,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
     clinicalEvolution: '',
     evolutionId: '',
     packageId: '',
+    sharedToWhitelabels: [],
     recurrence: 'NONE',
     recurrenceDays: [],
   });
@@ -75,9 +82,15 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
 
     const unsubPatients = patientService.subscribeToPatients(setPatients, undefined, user?.activeWhitelabelId);
     const unsubTherapists = therapistService.subscribeToTherapists(setTherapists, user?.activeWhitelabelId);
+    const whitelabelId = user?.activeWhitelabelId;
+    const real = !!whitelabelId && !isLegacyWhitelabel(whitelabelId);
+    const unsubShared = real ? patientService.subscribeToSharedPatients(whitelabelId, setSharedPatients) : () => {};
+    const unsubLinks = real ? whitelabelLinksService.subscribe(whitelabelId, setLinks) : () => {};
     return () => {
       unsubPatients();
       unsubTherapists();
+      unsubShared();
+      unsubLinks();
     };
   }, [isOpen, user?.activeWhitelabelId]);
 
@@ -103,6 +116,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
       clinicalEvolution: '',
       evolutionId: '',
       packageId: '',
+      sharedToWhitelabels: [],
       recurrence: 'NONE',
       recurrenceDays: [],
     });
@@ -153,10 +167,26 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
         ? `A recorrência pode criar até ${recurrenceCount} agendamentos e o pacote tem ${selectedPackage.progress.remaining} sessões restantes.`
         : '';
 
+  // Whitelabels em que o agendamento pode aparecer: o dono do paciente (se for de outro) ou os destinos do compartilhamento.
+  const selectedPatient = patients.find(patient => patient.id === formData.patientId);
+  const shareOwnerId = formData.patientWhitelabelId;
+  const shareNameOf = (id: string, fallback: string) =>
+    allowedShareTargets(links).find(target => target.id === id)?.name ?? fallback;
+  const shareOptions = shareOwnerId
+    ? [{ id: shareOwnerId, name: shareNameOf(shareOwnerId, 'Clínica de origem do paciente') }]
+    : (selectedPatient?.sharedWith ?? []).map(id => ({ id, name: shareNameOf(id, id) }));
+
   const handlePatientChange = (patientId: string) => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return;
-    setFormData({ ...formData, patientId, patientName: patient.name, packageId: '' });
+    setFormData({
+      ...formData,
+      patientId,
+      patientName: patient.name,
+      packageId: '',
+      patientWhitelabelId: user?.activeWhitelabelId && isForeignPatient(patient, user.activeWhitelabelId) ? patient.whitelabelId : undefined,
+      sharedToWhitelabels: [],
+    });
     setSearchTerm(patient.name);
     setIsPatientListOpen(false);
   };
@@ -170,7 +200,10 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.cpf?.includes(searchTerm);
-    const matchesTherapist = !formData.therapistId || p.therapistId === formData.therapistId;
+    // Paciente compartilhado vem com o terapeuta do whitelabel de origem, que não vale aqui.
+    const matchesTherapist = !formData.therapistId
+      || p.therapistId === formData.therapistId
+      || (!!user?.activeWhitelabelId && isForeignPatient(p, user.activeWhitelabelId));
     return matchesSearch && matchesTherapist;
   });
 
@@ -296,7 +329,7 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
                   <button
                     type="button"
                     onClick={() => {
-                      setFormData({ ...formData, patientId: '', patientName: '', packageId: '' });
+                      setFormData({ ...formData, patientId: '', patientName: '', packageId: '', patientWhitelabelId: undefined, sharedToWhitelabels: [] });
                       setSearchTerm('');
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
@@ -355,6 +388,32 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
                 {packageWarning && (
                   <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">{packageWarning}</p>
                 )}
+              </div>
+            )}
+
+            {formData.patientId && shareOptions.length > 0 && (
+              <div>
+                <label className={labelClass}>Mostrar na agenda de</label>
+                <div className="space-y-1">
+                  {shareOptions.map(option => (
+                    <label key={option.id} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                      <input
+                        type="checkbox"
+                        checked={(formData.sharedToWhitelabels ?? []).includes(option.id)}
+                        onChange={() => {
+                          const current = formData.sharedToWhitelabels ?? [];
+                          setFormData({
+                            ...formData,
+                            sharedToWhitelabels: current.includes(option.id) ? current.filter(id => id !== option.id) : [...current, option.id],
+                          });
+                        }}
+                        className="size-4 accent-primary"
+                      />
+                      {option.name}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Aparece só como bloco de leitura, sem notas nem evolução.</p>
               </div>
             )}
 
