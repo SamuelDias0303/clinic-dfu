@@ -3,6 +3,7 @@ import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
+import { allowedShareTargets, clampShareTargets, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -169,3 +170,36 @@ const candidates = evolutionCandidates([
 assert.deepEqual(candidates.map((item) => item.id), ['e2', 'e1', 'e5']);
 
 console.log('OK: evolucao pendente e idade do bebe.');
+
+// Compartilhamento entre whitelabels.
+assert.equal(isForeignPatient({}, 'A'), false);
+assert.equal(isForeignPatient({ whitelabelId: 'A' }, 'A'), false);
+assert.equal(isForeignPatient({ whitelabelId: 'B' }, 'A'), true);
+assert.equal(patientOwnerWhitelabel({ whitelabelId: 'B' }, 'A'), 'B');
+assert.equal(patientOwnerWhitelabel({}, 'A'), 'A');
+
+const split = splitAppointments([
+  { id: '1', whitelabelId: 'A' },
+  { id: '2', whitelabelId: 'B' },
+  { id: '3' },
+], 'A');
+assert.deepEqual(split.own.map((item) => item.id), ['1', '3']);
+assert.deepEqual(split.external.map((item) => item.id), ['2']);
+
+const pkgs = [
+  { id: 'p1', therapistId: 'ana@x.com' },
+  { id: 'p2', therapistId: 'bia@x.com' },
+  { id: 'p3' },
+];
+assert.deepEqual(packagesForTherapist(pkgs, 'ana@x.com').map((item) => item.id), ['p1', 'p3']);
+
+assert.deepEqual(clampShareTargets(['a', 'b', 'a', 'x', 'c', 'd'], ['a', 'b', 'c', 'd']), ['a', 'b', 'c']);
+assert.deepEqual(clampShareTargets([], ['a']), []);
+
+assert.deepEqual(allowedShareTargets(null), []);
+assert.deepEqual(
+  allowedShareTargets({ targetIds: ['b'], targets: [{ id: 'b', name: 'B', slug: 'b' }] }).map((item) => item.id),
+  ['b'],
+);
+
+console.log('OK: compartilhamento entre whitelabels.');

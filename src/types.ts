@@ -34,6 +34,11 @@ export interface Whitelabel {
   updatedAt?: any;
 }
 
+export interface WhitelabelLinks {
+  targetIds: string[];
+  targets: { id: string; name: string; slug: string }[];
+}
+
 export interface WhitelabelMembership {
   id?: string;
   whitelabelId: string;
@@ -119,6 +124,8 @@ export interface Patient {
   status: 'Ativo' | 'Inativo';
   therapistId?: string;
   therapistName?: string;
+  // Whitelabels com acesso ao paciente e ao prontuário (máximo 3).
+  sharedWith?: string[];
   createdAt?: any;
 }
 
@@ -390,6 +397,9 @@ export interface Package {
   totalSessions: number;
   status: 'ATIVO' | 'ENCERRADO';
   createdBy: string;
+  therapistId?: string;
+  therapistName?: string;
+  patientWhitelabelId?: string;
   createdAt?: any;
 }
 
@@ -408,6 +418,9 @@ export interface Appointment {
   clinicalEvolution?: string;
   evolutionId?: string;
   packageId?: string;
+  patientWhitelabelId?: string;
+  // Whitelabels em que este agendamento aparece, só leitura (máximo 3).
+  sharedToWhitelabels?: string[];
   recurrence?: 'NONE' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY';
   recurrenceDays?: number[]; // 0-6 (Sunday-Saturday)
   recurrenceId?: string;

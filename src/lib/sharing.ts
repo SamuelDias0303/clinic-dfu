@@ -1,0 +1,37 @@
+import { Appointment, Package, Patient, WhitelabelLinks } from '../types';
+
+// Limite das regras do Firestore: elas olham posições fixas (0, 1, 2) de sharedWith.
+export const MAX_SHARED_WHITELABELS = 3;
+
+export function isForeignPatient(patient: Pick<Patient, 'whitelabelId'>, activeWhitelabelId: string): boolean {
+  return !!patient.whitelabelId && patient.whitelabelId !== activeWhitelabelId;
+}
+
+export function patientOwnerWhitelabel(patient: Pick<Patient, 'whitelabelId'>, activeWhitelabelId: string): string {
+  return patient.whitelabelId ?? activeWhitelabelId;
+}
+
+export function isExternalAppointment(appointment: Pick<Appointment, 'whitelabelId'>, activeWhitelabelId: string): boolean {
+  return !!appointment.whitelabelId && appointment.whitelabelId !== activeWhitelabelId;
+}
+
+export function splitAppointments<T extends Pick<Appointment, 'whitelabelId'>>(list: T[], activeWhitelabelId: string) {
+  const own: T[] = [];
+  const external: T[] = [];
+  list.forEach((item) => (isExternalAppointment(item, activeWhitelabelId) ? external : own).push(item));
+  return { own, external };
+}
+
+// Pacotes do terapeuta e os antigos, sem terapeuta, que servem a qualquer um.
+export function packagesForTherapist<T extends Pick<Package, 'therapistId'>>(packages: T[], therapistId: string): T[] {
+  return packages.filter((pkg) => !pkg.therapistId || pkg.therapistId === therapistId);
+}
+
+export function allowedShareTargets(links: WhitelabelLinks | null) {
+  return links?.targets ?? [];
+}
+
+export function clampShareTargets(requested: string[], allowedIds: string[]): string[] {
+  const allowed = new Set(allowedIds);
+  return [...new Set(requested)].filter((id) => allowed.has(id)).slice(0, MAX_SHARED_WHITELABELS);
+}
