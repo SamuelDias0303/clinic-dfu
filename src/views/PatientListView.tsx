@@ -10,6 +10,7 @@ import PatientFormModal from '../components/PatientFormModal';
 import ConfirmModal from '../components/ConfirmModal';
 import AssignTherapistModal from '../components/AssignTherapistModal';
 import SharePatientsModal from '../components/SharePatientsModal';
+import SharedPatientsPanel from '../components/SharedPatientsPanel';
 import { SHARE_LEVEL_LABELS, allowedShareTargets, canEditSharedPatient, isForeignPatient, patientLevel, stripForeignEditFields } from '../lib/sharing';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { isUnassigned } from '../lib/clinicalHelpers';
@@ -29,9 +30,13 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   const [sharedPatients, setSharedPatients] = useState<Patient[]>([]);
   const [links, setLinks] = useState<WhitelabelLinks | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isSharedPanelOpen, setIsSharedPanelOpen] = useState(false);
   const activeWhitelabelId = user?.activeWhitelabelId ?? '';
   const shareTargets = allowedShareTargets(links);
-  const canShare = (user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL') && shareTargets.length > 0;
+  const isGestorOrAdmin = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
+  const canShare = isGestorOrAdmin && shareTargets.length > 0;
+  // Ver o que já foi compartilhado vale mesmo se o admin tirou o vínculo depois.
+  const sharedOutCount = patients.filter((patient) => (patient.sharedWith ?? []).length > 0).length;
   const allPatients = [...patients, ...sharedPatients];
   const nameOfWhitelabel = (id: string) => shareTargets.find((target) => target.id === id)?.name ?? id;
   const canAssignTherapist = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
@@ -123,6 +128,15 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
             >
               <Users size={18} />
               Atribuir terapeuta ({unassignedCount})
+            </button>
+          )}
+          {isGestorOrAdmin && sharedOutCount > 0 && (
+            <button
+              onClick={() => setIsSharedPanelOpen(true)}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-700 text-sm font-bold hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 transition-all active:scale-95"
+            >
+              <Share2 size={18} />
+              Compartilhados ({sharedOutCount})
             </button>
           )}
           {canShare && (
@@ -400,6 +414,18 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
         patients={patients}
         therapists={therapists}
         whitelabelId={user?.activeWhitelabelId}
+      />
+
+      <SharedPatientsPanel
+        isOpen={isSharedPanelOpen}
+        onClose={() => setIsSharedPanelOpen(false)}
+        patients={patients.filter((patient): patient is Patient & { id: string } => !!patient.id)}
+        targets={shareTargets}
+        onChange={({ patient, sharedWith, sharedAccess }) => patientService.setSharedWith(
+          [{ patient, sharedWith, sharedAccess }],
+          activeWhitelabelId,
+          { uid: user?.id ?? user?.email ?? '', email: user?.email ?? '' },
+        )}
       />
 
       <SharePatientsModal

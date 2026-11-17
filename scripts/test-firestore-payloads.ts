@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import type { Patient } from '../src/types';
 import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
-import { allowedShareTargets, stripForeignEditFields, canEditSharedPatient, canWriteClinical, levelOf, normalizeAccess, patientLevel, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
+import { allowedShareTargets, sharedRows, withTargetLevel, withoutTarget, stripForeignEditFields, canEditSharedPatient, canWriteClinical, levelOf, normalizeAccess, patientLevel, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -305,3 +306,20 @@ assert.deepEqual(
   { name: 'N', phone: '1' },
 );
 console.log('OK: edicao pelo destino.');
+
+// Painel de compartilhados: uma linha por paciente e destino, com o nível de cada um.
+const sharedBase = { cpf: '', birthDate: '', phone: '', email: '', healthPlan: '', address: '', status: 'Ativo' as const };
+const sharedPatientsList: (Patient & { id: string })[] = [
+  { id: 'p2', name: 'Bruno', ...sharedBase, sharedWith: ['B'], sharedAccess: { B: 'LEITURA' as const } },
+  { id: 'p1', name: 'Ana', ...sharedBase, sharedWith: ['C', 'B'], sharedAccess: { C: 'EDICAO' as const } },
+  { id: 'p3', name: 'Caio', ...sharedBase },
+];
+const sharedLinesView = sharedRows(sharedPatientsList, (id) => ({ B: 'Raiza', C: 'Rafaela' }[id] ?? id));
+assert.deepEqual(
+  sharedLinesView.map((row) => [row.patientName, row.targetName, row.level]),
+  [['Ana', 'Rafaela', 'EDICAO'], ['Ana', 'Raiza', 'PADRAO'], ['Bruno', 'Raiza', 'LEITURA']],
+);
+// Trocar o nível de um destino mexe só nele; remover tira o destino e o nível dele.
+assert.deepEqual(withTargetLevel(sharedPatientsList[1], 'B', 'LEITURA'), { sharedWith: ['C', 'B'], sharedAccess: { C: 'EDICAO', B: 'LEITURA' } });
+assert.deepEqual(withoutTarget(sharedPatientsList[1], 'C'), { sharedWith: ['B'], sharedAccess: {} });
+console.log('OK: painel de compartilhados.');

@@ -134,3 +134,36 @@ export function stripForeignEditFields<T extends Record<string, unknown>>(data: 
   });
   return result as Partial<T>;
 }
+
+// --- Painel de compartilhados -------------------------------------------------
+export interface SharedRow {
+  patientId: string;
+  patientName: string;
+  targetId: string;
+  targetName: string;
+  level: ShareLevel;
+}
+
+// Uma linha por paciente e destino, por nome do paciente e depois pela ordem dos destinos no cadastro.
+export function sharedRows(patients: (Patient & { id: string })[], targetName: (id: string) => string): SharedRow[] {
+  return patients
+    .filter((patient) => (patient.sharedWith ?? []).length > 0)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .flatMap((patient) => (patient.sharedWith ?? []).map((targetId) => ({
+      patientId: patient.id,
+      patientName: patient.name,
+      targetId,
+      targetName: targetName(targetId),
+      level: levelOf(patient.sharedAccess, targetId),
+    })));
+}
+
+export function withTargetLevel(patient: Pick<Patient, 'sharedWith' | 'sharedAccess'>, targetId: string, level: ShareLevel) {
+  const sharedWith = patient.sharedWith ?? [];
+  return { sharedWith, sharedAccess: normalizeAccess(sharedWith, { ...(patient.sharedAccess ?? {}), [targetId]: level }) };
+}
+
+export function withoutTarget(patient: Pick<Patient, 'sharedWith' | 'sharedAccess'>, targetId: string) {
+  const sharedWith = (patient.sharedWith ?? []).filter((id) => id !== targetId);
+  return { sharedWith, sharedAccess: normalizeAccess(sharedWith, patient.sharedAccess) };
+}
