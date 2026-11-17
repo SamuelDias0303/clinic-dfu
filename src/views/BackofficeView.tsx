@@ -9,6 +9,7 @@ import {
   Palette,
   Plus,
   Power,
+  Share2,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -16,6 +17,7 @@ import { motion } from 'motion/react';
 import ConfirmModal from '../components/ConfirmModal';
 import WhitelabelFormModal from '../components/WhitelabelFormModal';
 import WhitelabelMembersModal from '../components/WhitelabelMembersModal';
+import WhitelabelLinksModal from '../components/WhitelabelLinksModal';
 import TenantAccessState from '../components/TenantAccessState';
 import { useAuth } from '../contexts/AuthContext';
 import { whitelabelService } from '../services/whitelabelService';
@@ -36,6 +38,7 @@ export default function BackofficeView() {
   const [isMembersOpen, setIsMembersOpen] = useState(false);
   const [editingWhitelabel, setEditingWhitelabel] = useState<Whitelabel | undefined>();
   const [membersWhitelabel, setMembersWhitelabel] = useState<Whitelabel | undefined>();
+  const [linksWhitelabel, setLinksWhitelabel] = useState<Whitelabel | undefined>();
   const [confirmAction, setConfirmAction] = useState<{
     isOpen: boolean;
     title: string;
@@ -326,6 +329,14 @@ export default function BackofficeView() {
                         {isAdminGlobal && whitelabel.id !== LEGACY_WHITELABEL_ID && (
                           <>
                             <button
+                              onClick={() => setLinksWhitelabel(whitelabel)}
+                              className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                              title="Compartilhamento de pacientes"
+                              aria-label={`Compartilhamento de pacientes de ${whitelabel.name}`}
+                            >
+                              <Share2 size={17} />
+                            </button>
+                            <button
                               onClick={() => handleEdit(whitelabel)}
                               className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="Editar"
@@ -457,6 +468,13 @@ export default function BackofficeView() {
         isOpen={isMembersOpen}
         onClose={() => setIsMembersOpen(false)}
         whitelabel={membersWhitelabel}
+      />
+
+      <WhitelabelLinksModal
+        isOpen={!!linksWhitelabel}
+        onClose={() => setLinksWhitelabel(undefined)}
+        whitelabel={linksWhitelabel}
+        whitelabels={whitelabels}
       />
 
       <ConfirmModal
