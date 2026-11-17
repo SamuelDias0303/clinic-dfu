@@ -6,7 +6,7 @@
 
 **Architecture:** Paciente e prontuário (`evolutions`, `anamneses`) ficam no whitelabel de origem; o paciente leva `sharedWith` (até 3 ids). O destino lê e grava lá por regras que checam posições fixas de `sharedWith`. Agendamentos e pacotes ficam no whitelabel de quem atende; o agendamento tem a tag `sharedToWhitelabels` para aparecer, só leitura, na agenda de outro whitelabel. O admin libera destinos em `whitelabelLinks/{origem}`.
 
-**Tech Stack:** React 19, Vite, TypeScript, Tailwind v4, Firebase (Firestore rules, collection group queries), tsx para testes, `@firebase/rules-unit-testing` para regras.
+**Tech Stack:** React 19, Vite, TypeScript, Tailwind v4, Firebase (Firestore rules, cópias-índice `sharedPatients` e `sharedAppointments` no destino), tsx para testes, `@firebase/rules-unit-testing` para regras.
 
 **Spec:** `docs/superpowers/specs/2026-11-17-pacientes-compartilhados-design.md`
 
@@ -28,7 +28,7 @@
 - Gestor de um whitelabel tenta gravar `sharedWith` com id não liberado pelo admin: regra nega.
 - Terapeuta ou recepção tenta alterar `sharedWith`: regra nega.
 - Whitelabel não listado em `sharedWith` tenta ler paciente, evolução ou anamnese: regra nega.
-- A consulta entre whitelabels de pacientes não reabre a coleção raiz legada `/patients` (que hoje é `if false`).
+- A coleção raiz legada `/patients` continua negada (cenário no teste de regras).
 - Remover um whitelabel de `sharedWith` ou de `whitelabelLinks` com agendamentos e pacotes já criados no destino: nada quebra, o paciente só some da lista do destino e os blocos compartilhados somem da agenda.
 
 ---
@@ -77,13 +77,13 @@
   - `patients`: leitura também quando `sharedWithMe(resource.data.sharedWith)`; criação e atualização só aceitam `sharedWith` ausente/igual ao existente ou, se mudou, só por gestor/admin com `validSharedWith`. Atualização por membro do destino: negada.
   - `evolutions` e `anamneses`: leitura/criação/atualização/exclusão (evolução) também quando `sharedWithMe(get(.../patients/$(patientId)).data.sharedWith)` e o usuário é gestor ou terapeuta do whitelabel que o liga (checado com `isGestor/isTerapeuta` dos 3 candidatos de `sharedWith`; função `sharedRoleMe(list, roles)`).
   - `appointments`: leitura também quando `sharedWithMe(resource.data.sharedToWhitelabels)`; escrita de `sharedToWhitelabels` exige lista de strings, tamanho ≤ 3, e `sharedToWhitelabels.hasOnly(get(.../whitelabels/$(patientWhitelabelId)/patients/$(patientId)).data.sharedWith)` (só quando `sharedToWhitelabels` não está vazia).
-  - Consulta entre whitelabels: `match /{path=**}/patients/{patientId}` e `match /{path=**}/appointments/{id}` com `allow read` quando `sharedWithMe(resource.data.sharedWith)` / `sharedToWhitelabels`. Guarda: exige `resource.data.whitelabelId is string` para não reabrir a raiz legada.
+  - Cópias-índice (decisão após teste no emulador: consulta entre whitelabels não é provável pelas regras): `whitelabels/{destino}/sharedPatients/{origem}__{pacienteId}` (leitura de membro ativo do destino; gravação só por gestor da origem quando `destino in getAfter(paciente).sharedWith`) e `whitelabels/{destino}/sharedAppointments/{origem}__{agendamentoId}` (gravação por gestor, recepção ou terapeuta da origem quando `destino in getAfter(agendamento).sharedToWhitelabels`). A leitura direta de agendamento por outro whitelabel não existe.
 - Produces (script): `npm run test:rules` = `firebase emulators:exec --only firestore "tsx scripts/test-firestore-rules.ts"`.
 
 - [ ] **Step 1: Instalar** `@firebase/rules-unit-testing` como devDependency e adicionar o script `test:rules` ao `package.json`.
-- [ ] **Step 2: Write the failing tests** em `scripts/test-firestore-rules.ts` usando `initializeTestEnvironment` com o conteúdo de `firestore.rules`. Cenários (cada um um `assertSucceeds`/`assertFails` com nome claro): (a) gestor da origem grava `sharedWith:['B']` com `whitelabelLinks/A.targetIds=['B']` → sucesso; (b) mesmo com `targetIds=[]` → falha; (c) terapeuta/recepção da origem altera `sharedWith` → falha; (d) membro de B lê paciente de A com `sharedWith:['B']` → sucesso; membro de C → falha; (e) membro de B (gestor e terapeuta) lê e grava evolução do paciente compartilhado → sucesso; membro de C → falha; recepção de B lê evolução → falha; (f) membro de B lê agendamento de A com `sharedToWhitelabels:['B']`, e não lê sem a tag; (g) `collectionGroup('patients').where('sharedWith','array-contains','B')` funciona para B e uma leitura direta em `/patients/x` (raiz legada) continua negada; (h) `sharedWith` com 4 ids → falha; (i) gestor de B tenta alterar o cadastro do paciente de A → falha; (j) criar pacote com `therapistId` continua aceito; (k) agendamento com `sharedToWhitelabels:['C']` para paciente cujo `sharedWith` é `['B']` → falha.
+- [ ] **Step 2: Write the failing tests** em `scripts/test-firestore-rules.ts` usando `initializeTestEnvironment` com o conteúdo de `firestore.rules`. Cenários (cada um um `assertSucceeds`/`assertFails` com nome claro): (a) gestor da origem grava `sharedWith:['B']` com `whitelabelLinks/A.targetIds=['B']` → sucesso; (b) mesmo com `targetIds=[]` → falha; (c) terapeuta/recepção da origem altera `sharedWith` → falha; (d) membro de B lê paciente de A com `sharedWith:['B']` → sucesso; membro de C → falha; (e) membro de B (gestor e terapeuta) lê e grava evolução do paciente compartilhado → sucesso; membro de C → falha; recepção de B lê evolução → falha; (f) a tag só passa com whitelabels de `sharedWith`; (g) cópias-índice gravadas só por quem pode, lidas só por membros do destino, e a raiz legada `/patients/x` continua negada; (h) `sharedWith` com 4 ids → falha; (i) gestor de B tenta alterar o cadastro do paciente de A → falha; (j) criar pacote com `therapistId` continua aceito; (k) agendamento com `sharedToWhitelabels:['C']` para paciente cujo `sharedWith` é `['B']` → falha.
 - [ ] **Step 3: Run** `npm run test:rules`. Expected: FAIL nos cenários de compartilhamento (regras ainda não existem).
-- [ ] **Step 4: Implement** as regras e os índices de grupo de coleção (`patients.sharedWith` com `arrayConfig CONTAINS`, `appointments.sharedToWhitelabels` com `arrayConfig CONTAINS`). Atualizar `isValidPackageCreate` só se o cenário (j) falhar.
+- [ ] **Step 4: Implement** as regras (sem índices novos). Atualizar `isValidPackageCreate` só se o cenário (j) falhar.
 - [ ] **Step 5: Run** `npm run test:rules`. Expected: todos os cenários PASS.
 - [ ] **Step 6: Dry-run** `firebase deploy --only firestore:rules,firestore:indexes --project clinic-dfu --dry-run`. Expected: compila sem erro.
 - [ ] **Step 7: Commit** — "Regras de compartilhamento de pacientes entre whitelabels".
@@ -103,8 +103,10 @@
   - `whitelabelLinksService.subscribe(whitelabelId, cb: (links: WhitelabelLinks | null) => void): Unsubscribe`
   - `whitelabelLinksService.save(whitelabelId, targets: { id; name; slug }[]): Promise<void>` — grava `targetIds` e `targets`.
   - `patientService.setSharedWith(patientIds: string[], sharedWith: string[], whitelabelId, actor: { uid: string; email: string }): Promise<void>` — atualiza `sharedWith` de cada paciente e cria um `auditLogs` com ação `PACIENTE_COMPARTILHADO`, paciente, origem e destinos.
-  - `patientService.subscribeToSharedPatients(whitelabelId, cb: (patients: Patient[]) => void): Unsubscribe` — `collectionGroup('patients')` com `where('sharedWith','array-contains',whitelabelId)`; cada paciente traz `whitelabelId` da origem.
-  - `appointmentService.subscribeToSharedAppointments(whitelabelId, cb: (appointments: Appointment[]) => void): Unsubscribe` — `collectionGroup('appointments')` com `where('sharedToWhitelabels','array-contains',whitelabelId)`.
+  - `patientService.subscribeToSharedPatients(whitelabelId, cb: (patients: Patient[]) => void): Unsubscribe` — lê `sharedPatients` do whitelabel; devolve `Patient` com `id = patientId` e `whitelabelId = ownerWhitelabelId`.
+  - `patientService.syncSharedCopies(patient: Patient, whitelabelId): Promise<void>` — mantém as cópias em dia (usado em `setSharedWith` e em `updatePatient` quando o paciente tem `sharedWith`); remove cópia de destino que saiu da lista.
+  - `appointmentService.subscribeToSharedAppointments(whitelabelId, cb: (appointments: Appointment[]) => void): Unsubscribe` — lê `sharedAppointments`; devolve `Appointment` com `id = appointmentId` e `whitelabelId = sourceWhitelabelId`.
+  - `appointmentService.syncSharedCopies(appointment: Appointment & { id: string }, whitelabelId): Promise<void>` — grava/atualiza a cópia em cada destino da tag e remove de quem saiu; `createAppointment`, `updateAppointment`, `deleteAppointment` e `deleteRecurrence` chamam essa sincronização.
   - `packageService.createPackage(data: { patientId; totalSessions; createdBy; therapistId?; therapistName?; patientWhitelabelId? }, whitelabelId)`.
 - `checkConflict` não muda: só consulta a coleção do whitelabel ativo, então os blocos compartilhados nunca geram conflito.
 
@@ -191,6 +193,6 @@
 - Modify: `docs/` (nota curta de operação, se existir seção de regras)
 
 - [ ] **Step 1: Run** `npm run lint && npm run build && npm run test:local && npm run test:rules`. Expected: tudo PASS.
-- [ ] **Step 2: Pedir OK ao usuário**, depois `firebase deploy --only firestore:rules,firestore:indexes --project clinic-dfu` e esperar os índices ficarem prontos (índice de grupo de coleção leva alguns minutos).
+- [ ] **Step 2: Pedir OK ao usuário**, depois `firebase deploy --only firestore:rules --project clinic-dfu` (sem índices novos).
 - [ ] **Step 3: Push** com OK do usuário.
 - [ ] **Step 4: Verificar no navegador** (conta do usuário logada): admin libera `raiza-fisio` ↔ `rafaela-fisio`; gestor compartilha um paciente; o outro lado vê, agenda com a tag ligada e desligada, registra evolução; pacote de dois terapeutas separado.

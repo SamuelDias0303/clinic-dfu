@@ -21,7 +21,8 @@
     "firebase:emulators:start": "firebase emulators:start --only auth,firestore,storage",
     "graphify": "powershell -ExecutionPolicy Bypass -File scripts/graphify.ps1",
     "migration:whitelabel:prepare": "powershell -ExecutionPolicy Bypass -File scripts/prepare-whitelabel-migration.ps1",
-    "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes"
+    "firebase:deploy:firestore": "firebase deploy --only firestore:rules,firestore:indexes",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-clinic-rules \"tsx scripts/test-firestore-rules.ts\""
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -38,6 +39,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",

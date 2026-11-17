@@ -285,6 +285,82 @@ service cloud.firestore {
         );
     }
 
+    // --- Compartilhamento de pacientes entre whitelabels -------------------
+    //
+    // Regras nao percorrem listas: olham as posicoes 0, 1 e 2 de `sharedWith`
+    // (limite de 3 whitelabels por paciente). `whitelabelLinks/{origem}` e
+    // gravado so pelo admin e diz para quais whitelabels a origem pode compartilhar.
+
+    function linkedTargets(whitelabelId) {
+      return exists(/databases/$(database)/documents/whitelabelLinks/$(whitelabelId))
+        ? get(/databases/$(database)/documents/whitelabelLinks/$(whitelabelId)).data.targetIds
+        : [];
+    }
+
+    function sharedList(data, field) {
+      return data.get(field, []) is list ? data.get(field, []) : [];
+    }
+
+    function sharedMemberAt(list, i, roles) {
+      return list.size() > i && list[i] is string && hasTenantRole(list[i], roles);
+    }
+
+    function sharedRoleMe(list, roles) {
+      return sharedMemberAt(list, 0, roles)
+        || sharedMemberAt(list, 1, roles)
+        || sharedMemberAt(list, 2, roles);
+    }
+
+    function sharedWithMe(list) {
+      return sharedRoleMe(list, ['GESTOR', 'REPCAO', 'TERAPEUTA']);
+    }
+
+    // Aceita ids liberados pelo admin; ids que ja estavam na lista podem ficar.
+    function validSharedList(whitelabelId, list, previous) {
+      return list is list
+        && list.size() <= 3
+        && list.hasOnly(linkedTargets(whitelabelId).concat(previous));
+    }
+
+    function sharedWithCreateOk(whitelabelId) {
+      let list = sharedList(request.resource.data, 'sharedWith');
+      return list.size() == 0
+        || (isGestor(whitelabelId) && validSharedList(whitelabelId, list, []));
+    }
+
+    function sharedWithUpdateOk(whitelabelId) {
+      let next = sharedList(request.resource.data, 'sharedWith');
+      let previous = sharedList(resource.data, 'sharedWith');
+      return next == previous
+        || (isGestor(whitelabelId) && validSharedList(whitelabelId, next, previous));
+    }
+
+    function sharedPatientList(ownerWhitelabelId, patientId) {
+      return sharedList(
+        get(/databases/$(database)/documents/whitelabels/$(ownerWhitelabelId)/patients/$(patientId)).data,
+        'sharedWith'
+      );
+    }
+
+    // Prontuario (evolucoes e anamnese) do paciente compartilhado: gestor e terapeuta do destino.
+    function sharedClinicalAccess(ownerWhitelabelId, patientId) {
+      return patientId is string
+        && sharedRoleMe(sharedPatientList(ownerWhitelabelId, patientId), ['GESTOR', 'TERAPEUTA']);
+    }
+
+    // Tag do agendamento: so whitelabels do compartilhamento do paciente (ou o dono dele).
+    function sharedToOk(whitelabelId) {
+      let data = request.resource.data;
+      let to = sharedList(data, 'sharedToWhitelabels');
+      let owner = data.get('patientWhitelabelId', whitelabelId);
+      return to.size() == 0
+        || (
+          to.size() <= 3
+          && data.patientId is string
+          && to.hasOnly(sharedPatientList(owner, data.patientId).concat([owner]))
+        );
+    }
+
     // Pacote de atendimento: so total de sessoes e status. As sessoes usadas
     // sao calculadas no cliente pelos agendamentos CONCLUIDO com o mesmo
     // packageId, entao nada aqui precisa ser estornado.
@@ -359,6 +435,11 @@ service cloud.firestore {
           || resource.data.userId == request.auth.uid
           || resource.data.email == request.auth.token.email
         );
+    }
+
+    match /whitelabelLinks/{whitelabelId} {
+      allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
+      allow write: if isAdminGlobal();
     }
 
     match /whitelabels/{whitelabelId} {
@@ -443,10 +524,12 @@ service cloud.firestore {
             || isGestor(whitelabelId)
             || isRecepcao(whitelabelId)
             || therapistCanAccessPatient(whitelabelId)
+            || sharedWithMe(sharedList(resource.data, 'sharedWith'))
           );
         allow create: if isAdminGlobal()
           || (
             tenantFieldIsValid(whitelabelId)
+            && sharedWithCreateOk(whitelabelId)
             && (
               isGestor(whitelabelId)
               || isRecepcao(whitelabelId)
@@ -457,6 +540,7 @@ service cloud.firestore {
           || (
             existingTenantFieldIsValid(whitelabelId)
             && tenantFieldIsValid(whitelabelId)
+            && sharedWithUpdateOk(whitelabelId)
             && (
               isGestor(whitelabelId)
               || isRecepcao(whitelabelId)
@@ -500,6 +584,7 @@ service cloud.firestore {
         allow create: if isAdminGlobal()
           || (
             tenantFieldIsValid(whitelabelId)
+            && sharedToOk(whitelabelId)
             && (
               isGestor(whitelabelId)
               || isRecepcao(whitelabelId)
@@ -520,6 +605,7 @@ service cloud.firestore {
           || (
             existingTenantFieldIsValid(whitelabelId)
             && tenantFieldIsValid(whitelabelId)
+            && sharedToOk(whitelabelId)
             && (
               isGestor(whitelabelId)
               || isRecepcao(whitelabelId)
@@ -537,6 +623,42 @@ service cloud.firestore {
             )
           );
         allow delete: if isAdminGlobal() || isGestor(whitelabelId) || isRecepcao(whitelabelId);
+      }
+
+      // Copias-indice no whitelabel de DESTINO. Consulta entre whitelabels nao e
+      // provavel pelas regras, entao o destino le a propria colecao (leitura comum
+      // de membro) e quem compartilha grava ali. Id: {origem}__{id}.
+      match /sharedPatients/{mirrorId} {
+        allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
+        allow create, update: if isAdminGlobal()
+          || (
+            request.resource.data.ownerWhitelabelId is string
+            && request.resource.data.patientId is string
+            && mirrorId == request.resource.data.ownerWhitelabelId + '__' + request.resource.data.patientId
+            && isGestor(request.resource.data.ownerWhitelabelId)
+            && whitelabelId in sharedList(
+              getAfter(/databases/$(database)/documents/whitelabels/$(request.resource.data.ownerWhitelabelId)/patients/$(request.resource.data.patientId)).data,
+              'sharedWith'
+            )
+          );
+        allow delete: if isAdminGlobal() || isGestor(resource.data.ownerWhitelabelId);
+      }
+
+      match /sharedAppointments/{mirrorId} {
+        allow read: if isAdminGlobal() || isActiveMember(whitelabelId);
+        allow create, update: if isAdminGlobal()
+          || (
+            request.resource.data.sourceWhitelabelId is string
+            && request.resource.data.appointmentId is string
+            && mirrorId == request.resource.data.sourceWhitelabelId + '__' + request.resource.data.appointmentId
+            && hasTenantRole(request.resource.data.sourceWhitelabelId, ['GESTOR', 'REPCAO', 'TERAPEUTA'])
+            && whitelabelId in sharedList(
+              getAfter(/databases/$(database)/documents/whitelabels/$(request.resource.data.sourceWhitelabelId)/appointments/$(request.resource.data.appointmentId)).data,
+              'sharedToWhitelabels'
+            )
+          );
+        allow delete: if isAdminGlobal()
+          || hasTenantRole(resource.data.sourceWhitelabelId, ['GESTOR', 'REPCAO', 'TERAPEUTA']);
       }
 
       match /packages/{packageId} {
@@ -576,6 +698,7 @@ service cloud.firestore {
             isAdminGlobal()
             || isGestor(whitelabelId)
             || isTerapeuta(whitelabelId)
+            || sharedClinicalAccess(whitelabelId, resource.data.patientId)
           );
         allow create, update: if isAdminGlobal()
           || (
@@ -584,10 +707,16 @@ service cloud.firestore {
               isGestor(whitelabelId)
               || isTerapeuta(whitelabelId)
             )
+          )
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && sharedClinicalAccess(whitelabelId, request.resource.data.patientId)
+            && (request.method == 'create' || resource.data.patientId == request.resource.data.patientId)
           );
         allow delete: if isAdminGlobal()
           || isGestor(whitelabelId)
-          || isTerapeuta(whitelabelId);
+          || isTerapeuta(whitelabelId)
+          || sharedClinicalAccess(whitelabelId, resource.data.patientId);
       }
 
       match /anamneses/{anamneseId} {
@@ -596,6 +725,7 @@ service cloud.firestore {
             isAdminGlobal()
             || isGestor(whitelabelId)
             || isTerapeuta(whitelabelId)
+            || sharedClinicalAccess(whitelabelId, resource.data.patientId)
           );
         allow create, update: if isAdminGlobal()
           || (
@@ -604,6 +734,11 @@ service cloud.firestore {
               isGestor(whitelabelId)
               || isTerapeuta(whitelabelId)
             )
+          )
+          || (
+            tenantFieldIsValid(whitelabelId)
+            && sharedClinicalAccess(whitelabelId, request.resource.data.patientId)
+            && (request.method == 'create' || resource.data.patientId == request.resource.data.patientId)
           );
         allow delete: if isAdminGlobal() || isGestor(whitelabelId);
       }

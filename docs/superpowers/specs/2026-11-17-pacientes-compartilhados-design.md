@@ -52,7 +52,7 @@ O usuário escolheu B.
 
 Regras não percorrem listas, então a checagem usa posições fixas de `sharedWith` (0, 1, 2), por isso o limite de 3. Uma função `sharedWithMe(origem, pacienteId)` faz um `get` do paciente e verifica se alguma das 3 posições é um whitelabel em que o usuário é membro ativo. Ela libera:
 
-- leitura do paciente (em `patients` e na consulta entre whitelabels);
+- leitura direta do paciente (documento do whitelabel de origem);
 - leitura e escrita de `evolutions` e `anamneses` ligadas ao paciente (pelo campo `patientId` do documento).
 
 Dentro do limite de 10 acessos por requisição. `sharedWith` só é validado como lista de até 3 strings e só muda se o usuário for gestor da origem ou admin.
@@ -62,13 +62,13 @@ Dentro do limite de 10 acessos por requisição. `sharedWith` só é validado co
 - Ao agendar um paciente compartilhado, o formulário mostra "Mostrar na agenda de: [whitelabels do paciente]". Padrão: desligado.
 - Nos whitelabels marcados, o agendamento aparece na agenda como bloco **somente leitura**, com selo do whitelabel de origem. Quem o vê não edita nem exclui.
 - Esse bloco **não impacta** o whitelabel que o vê: não entra em checagem de conflito de horário, em "Meu dia", em evolução pendente, em contagem de pacote nem no Painel. É só informação.
-- Regra de leitura: `appointments` libera leitura para membro ativo de qualquer whitelabel das 3 posições de `sharedToWhitelabels`. A agenda do destino busca por consulta entre whitelabels (`sharedToWhitelabels array-contains <whitelabel>`), com índice de grupo de coleção.
+- Cópia-índice: as regras do Firestore não conseguem provar acesso numa consulta entre whitelabels (verificado no emulador). Por isso o agendamento marcado é copiado para `whitelabels/{destino}/sharedAppointments/{origem}__{id}`, que o destino lê como qualquer coleção dele. Quem agenda grava e mantém a cópia (criar, editar, excluir, trocar tag). A tag pode incluir o dono do paciente além dos whitelabels de `sharedWith`.
 - Gravação de `sharedToWhitelabels` só passa se cada id também estiver em `sharedWith` do paciente.
 
 ### Telas
 
 - **Pacientes (gestor):** nova ação "Compartilhar" (em lote, por seleção) abre um modal com a lista de pacientes e os whitelabels de destino. Whitelabels disponíveis: só os de `whitelabelLinks/{origem}.targets`, definidos pelo admin (o gestor pode não ser membro do outro lado). Sem vínculo liberado, a ação "Compartilhar" **não aparece** (decisão minha entre sumir e ficar desabilitada: sumir evita um botão morto que o gestor não consegue destravar sozinho). Badge "Compartilhado com X" na origem, "Compartilhado" no destino.
-- **Lista de pacientes do destino:** mescla os próprios pacientes com os compartilhados (consulta entre whitelabels por `sharedWith array-contains <whitelabel>`, exige índice de grupo de coleção).
+- **Lista de pacientes do destino:** mescla os próprios pacientes com a coleção `whitelabels/{destino}/sharedPatients/{origem}__{id}`, cópia do cadastro gravada junto com `sharedWith` pelo gestor da origem (em lote) e atualizada a cada edição do cadastro. Abrir o prontuário usa o paciente real na origem.
 - **Prontuário e agenda:** quando o paciente é de outro whitelabel, os serviços usam o whitelabel de origem para evoluções e anamnese e gravam `patientWhitelabelId` no agendamento.
 - **Pacotes:** criar pacote exige terapeuta (o próprio, se quem cria é terapeuta). O formulário de agendamento lista e vincula automaticamente só pacotes do terapeuta escolhido (e os antigos sem terapeuta). O Painel agrupa por terapeuta como hoje.
 
