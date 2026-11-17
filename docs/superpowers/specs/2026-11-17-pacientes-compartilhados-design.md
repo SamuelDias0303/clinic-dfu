@@ -96,3 +96,19 @@ Pedido do usuário: o agendamento compartilhado também aparece em "Meu dia" no 
 - Evoluir grava a evolução no whitelabel do paciente e liga `evolutionId` ao agendamento de origem. Regra nova e estreita: gestor ou terapeuta de um whitelabel da tag altera no agendamento de origem **somente** `evolutionId` (e `updatedAt`), e na própria cópia somente `evolutionId`. Status nunca.
 - A cópia passa a levar `evolutionId`, para o "Meu dia" esconder Evoluir depois de registrada.
 - Limite: com a tag em mais de um destino, o `evolutionId` que um destino liga aparece na origem e na cópia dele; a cópia dos outros destinos só atualiza quando a origem editar de novo.
+
+## Complemento: níveis de acesso por destino (2026-11-17)
+
+Pedido do usuário: o gestor escolhe quanto o destino pode fazer. Três níveis aprovados:
+
+| Nível | Ver cadastro e prontuário | Agendar, evoluir, anamnese | Editar cadastro |
+|---|---|---|---|
+| `LEITURA` | sim | não | não |
+| `PADRAO` (é o de hoje) | sim | sim | não |
+| `EDICAO` | sim | sim | sim |
+
+- **Dados:** `Patient.sharedAccess?: Record<string, 'LEITURA' | 'PADRAO' | 'EDICAO'>`, chave = whitelabel de destino. Ausente = `PADRAO`, então nada que já foi compartilhado muda. A cópia do cadastro no destino (`sharedPatients`) leva `accessLevel` para a interface esconder o que o nível não permite.
+- **Quem muda o nível:** só gestor da origem ou admin global, junto com `sharedWith` (as chaves precisam estar em `sharedWith`; valores só os três níveis).
+- **Regras:** leitura do paciente e do prontuário vale para todos os níveis. Evolução e anamnese (criar, editar) exigem `PADRAO` ou `EDICAO`. Agendar paciente de outro whitelabel passa a exigir que o destino esteja em `sharedWith` do paciente e que o nível não seja `LEITURA` (isso também fecha um buraco de hoje: não há checagem de que o paciente de outro whitelabel foi mesmo compartilhado). Editar o cadastro no destino: gestor ou recepção com `EDICAO`, exceto `sharedWith`, `sharedAccess`, `whitelabelId`, `therapistId`, `therapistName` e `createdAt`; a cópia do destino pode ser atualizada pelo próprio destino nesse caso.
+- **Interface:** no modal "Compartilhar", escolha do nível por destino e mudança de nível dos já compartilhados; selo "Compartilhado · só leitura/edição"; destino sem permissão não vê Evoluir, aba de evolução, salvar anamnese, escolha do paciente no agendamento nem Editar.
+- **Limite:** quando o destino edita o cadastro, só a cópia dele atualiza na hora; as dos outros destinos atualizam quando o gestor da origem editar.
