@@ -4,7 +4,7 @@ import { toFirestoreData } from '../src/lib/firestoreData';
 import { evolutionCandidates, formatAge, isUnassigned, needsEvolution, upperFirst } from '../src/lib/clinicalHelpers';
 import { packageOverview, packageProgress } from '../src/lib/packageProgress';
 import { LEGACY_WHITELABEL_ID, withTenantField } from '../src/services/serviceScope';
-import { allowedShareTargets, sharedRows, withTargetLevel, withoutTarget, stripForeignEditFields, canEditSharedPatient, canWriteClinical, levelOf, normalizeAccess, patientLevel, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
+import { allowedShareTargets, isSharedPatient, sharedRows, withTargetLevel, withoutTarget, stripForeignEditFields, canEditSharedPatient, canWriteClinical, levelOf, normalizeAccess, patientLevel, visibleExternalAppointments, buildAppointmentCopy, buildPatientCopy, buildSharedWithAudit, clampShareTargets, copyTargetsDiff, isForeignPatient, packagesForTherapist, patientOwnerWhitelabel, sharedCopyId, splitAppointments } from '../src/lib/sharing';
 
 const cleaned = toFirestoreData({
   name: 'Clinica Teste',
@@ -323,3 +323,10 @@ assert.deepEqual(
 assert.deepEqual(withTargetLevel(sharedPatientsList[1], 'B', 'LEITURA'), { sharedWith: ['C', 'B'], sharedAccess: { C: 'EDICAO', B: 'LEITURA' } });
 assert.deepEqual(withoutTarget(sharedPatientsList[1], 'C'), { sharedWith: ['B'], sharedAccess: {} });
 console.log('OK: painel de compartilhados.');
+
+// Filtro "Compartilhados": vale para quem compartilhou (tem destinos) e para quem recebe (paciente de outro whitelabel).
+assert.equal(isSharedPatient({ whitelabelId: 'A', sharedWith: ['B'] }, 'A'), true);
+assert.equal(isSharedPatient({ whitelabelId: 'A', sharedWith: [] }, 'A'), false);
+assert.equal(isSharedPatient({ whitelabelId: 'A' }, 'A'), false);
+assert.equal(isSharedPatient({ whitelabelId: 'B' }, 'A'), true);
+console.log('OK: filtro de compartilhados.');

@@ -11,7 +11,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import AssignTherapistModal from '../components/AssignTherapistModal';
 import SharePatientsModal from '../components/SharePatientsModal';
 import SharedPatientsPanel from '../components/SharedPatientsPanel';
-import { SHARE_LEVEL_LABELS, allowedShareTargets, canEditSharedPatient, isForeignPatient, patientLevel, stripForeignEditFields } from '../lib/sharing';
+import { SHARE_LEVEL_LABELS, allowedShareTargets, canEditSharedPatient, isForeignPatient, isSharedPatient, patientLevel, stripForeignEditFields } from '../lib/sharing';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { isUnassigned } from '../lib/clinicalHelpers';
 
@@ -31,6 +31,7 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   const [links, setLinks] = useState<WhitelabelLinks | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isSharedPanelOpen, setIsSharedPanelOpen] = useState(false);
+  const [onlyShared, setOnlyShared] = useState(false);
   const activeWhitelabelId = user?.activeWhitelabelId ?? '';
   const shareTargets = allowedShareTargets(links);
   const isGestorOrAdmin = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
@@ -38,6 +39,9 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
   // Ver o que já foi compartilhado vale mesmo se o admin tirou o vínculo depois.
   const sharedOutCount = patients.filter((patient) => (patient.sharedWith ?? []).length > 0).length;
   const allPatients = [...patients, ...sharedPatients];
+  // O filtro só aparece quando existe algum paciente compartilhado (enviado ou recebido).
+  const hasSharedPatients = allPatients.some((patient) => isSharedPatient(patient, activeWhitelabelId));
+  const onlySharedFilter = onlyShared && hasSharedPatients;
   const nameOfWhitelabel = (id: string) => shareTargets.find((target) => target.id === id)?.name ?? id;
   const canAssignTherapist = user?.activeRole === 'GESTOR' || user?.activeRole === 'ADMIN_GLOBAL';
   const unassignedCount = patients.filter(isUnassigned).length;
@@ -104,8 +108,9 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
       (p.motherName ?? '').toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesTherapist = selectedTherapistId === 'all' || p.therapistId === selectedTherapistId;
-    
-    return matchesSearch && matchesTherapist;
+    const matchesShared = !onlySharedFilter || isSharedPatient(p, activeWhitelabelId);
+
+    return matchesSearch && matchesTherapist && matchesShared;
   });
 
   return (
@@ -174,7 +179,23 @@ export default function PatientListView({ onOpenProntuario }: { onOpenProntuario
                 className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all dark:text-white"
               />
             </div>
-            
+
+            {hasSharedPatients && (
+              <button
+                type="button"
+                aria-pressed={onlySharedFilter}
+                onClick={() => setOnlyShared((current) => !current)}
+                className={`flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
+                  onlySharedFilter
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                }`}
+              >
+                <Share2 size={16} />
+                Compartilhados
+              </button>
+            )}
+
             {user?.activeRole === 'GESTOR' && (
               <div className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 min-w-0">
                 <Users size={16} className="text-slate-400" />

@@ -167,3 +167,8 @@ export function withoutTarget(patient: Pick<Patient, 'sharedWith' | 'sharedAcces
   const sharedWith = (patient.sharedWith ?? []).filter((id) => id !== targetId);
   return { sharedWith, sharedAccess: normalizeAccess(sharedWith, patient.sharedAccess) };
 }
+
+// Filtro "Compartilhados": paciente que este whitelabel compartilhou ou que veio de outro.
+export function isSharedPatient(patient: Pick<Patient, 'whitelabelId' | 'sharedWith'>, activeWhitelabelId: string): boolean {
+  return isForeignPatient(patient, activeWhitelabelId) || (patient.sharedWith ?? []).length > 0;
+}
