@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { Calendar, ClipboardList, Clock, FileText, Loader2, Package as PackageIcon, Search, Trash2, User, Users, X } from 'lucide-react';
 import { Appointment, Package as PackageRecord, Patient, WhitelabelLinks } from '../types';
 import { packageProgress } from '../lib/packageProgress';
-import { allowedShareTargets, isForeignPatient } from '../lib/sharing';
+import { allowedShareTargets, isForeignPatient, packagesForTherapist } from '../lib/sharing';
 import { whitelabelLinksService } from '../services/whitelabelLinksService';
 import { isLegacyWhitelabel } from '../services/serviceScope';
 import { packageService } from '../services/packageService';
@@ -141,7 +141,8 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
     };
   }, [isOpen, formData.patientId, user?.activeWhitelabelId, packageTherapistId]);
 
-  const packageOptions = patientPackages
+  // Pacote é de um terapeuta: só entram os do terapeuta escolhido e os antigos, sem terapeuta.
+  const packageOptions = (formData.therapistId ? packagesForTherapist(patientPackages, formData.therapistId) : patientPackages)
     .map(pkg => ({ pkg, progress: packageProgress(pkg, packageAppointments.filter(item => item.packageId === pkg.id)) }))
     .filter(({ pkg, progress }) => progress.open || pkg.id === formData.packageId);
   // Agendamento novo: vincula sozinho ao pacote aberto do paciente. Uma vez por paciente, para "Sem pacote" escolhido à mão não voltar.
@@ -194,7 +195,9 @@ export default function AppointmentFormModal({ isOpen, onClose, onSubmit, onDele
   const handleTherapistChange = (therapistId: string) => {
     const therapist = therapists.find(t => t.id === therapistId);
     if (therapist) {
-      setFormData({ ...formData, therapistId, therapistName: therapist.name });
+      // Outro terapeuta, outros pacotes: o vínculo escolhido deixa de valer e o automático roda de novo.
+      autoLinkedPatient.current = '';
+      setFormData({ ...formData, therapistId, therapistName: therapist.name, packageId: initialData ? formData.packageId : '' });
     }
   };
 

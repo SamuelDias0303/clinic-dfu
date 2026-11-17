@@ -239,3 +239,20 @@ assert.deepEqual(buildSharedWithAudit('p1', 'A', ['B'], { uid: 'u1', email: 'g@x
 });
 
 console.log('OK: copias-indice de compartilhamento.');
+
+// Pacote por terapeuta: a linha usa o terapeuta do pacote; pacote antigo cai no terapeuta do paciente.
+const byTherapist = packageOverview(
+  [
+    { id: 'm1', patientId: 'pp', totalSessions: 5, status: 'ATIVO', createdBy: 'x', therapistId: 'ana@x.com', therapistName: 'Ana' },
+    { id: 'm2', patientId: 'pp', totalSessions: 5, status: 'ATIVO', createdBy: 'x', therapistId: 'bia@x.com', therapistName: 'Bia' },
+    { id: 'm3', patientId: 'pp', totalSessions: 5, status: 'ATIVO', createdBy: 'x' },
+  ],
+  [{ id: 'pp', name: 'Bebê', therapistId: 'raiza@x.com', therapistName: 'Raiza' }],
+  [],
+);
+assert.deepEqual(
+  byTherapist.map((row) => [row.packageId, row.therapistId, row.therapistName]),
+  [['m1', 'ana@x.com', 'Ana'], ['m2', 'bia@x.com', 'Bia'], ['m3', 'raiza@x.com', 'Raiza']],
+);
+
+console.log('OK: pacote por terapeuta.');

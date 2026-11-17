@@ -17,6 +17,7 @@ import { motion } from 'motion/react';
 import { patientService } from '../services/patientService';
 import { appointmentService } from '../services/appointmentService';
 import { packageService } from '../services/packageService';
+import { isLegacyWhitelabel } from '../services/serviceScope';
 import { Patient, Appointment, Package } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,6 +33,8 @@ interface DashboardViewProps {
 export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEvolution, onViewAgenda }: DashboardViewProps) {
   const { user } = useAuth();
   const [patients, setPatients] = useState<Patient[]>([]);
+  // Pacientes de outros whitelabels: entram só nos pacotes e nos atalhos de prontuário, nunca nas contagens.
+  const [sharedPatients, setSharedPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [packages, setPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,11 +56,15 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
     }, filterId, whitelabelId);
 
     const unsubscribePackages = packageService.subscribeToPackages(setPackages, whitelabelId);
+    const unsubscribeShared = whitelabelId && !isLegacyWhitelabel(whitelabelId)
+      ? patientService.subscribeToSharedPatients(whitelabelId, setSharedPatients)
+      : () => {};
 
     return () => {
       unsubscribePatients();
       unsubscribeAppointments();
       unsubscribePackages();
+      unsubscribeShared();
     };
   }, [user]);
 
@@ -74,7 +81,8 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
     .sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
   const canRecordEvolution = user?.activeRole === 'ADMIN_GLOBAL' || user?.activeRole === 'GESTOR' || user?.activeRole === 'TERAPEUTA';
 
-  const findPatient = (appointment: Appointment) => patients.find(patient => patient.id === appointment.patientId);
+  const visiblePatients = [...patients, ...sharedPatients];
+  const findPatient = (appointment: Appointment) => visiblePatients.find(patient => patient.id === appointment.patientId);
 
   const handleComplete = async (appointment: Appointment) => {
     if (!appointment.id) return;
@@ -185,15 +193,15 @@ export default function DashboardView({ onOpenProntuario, onOpenAgenda, onOpenEv
       <div className="order-3">
       <PackagesOverviewCard
         packages={packages}
-        patients={patients}
+        patients={visiblePatients}
         appointments={appointments}
         canFilterByTherapist={user?.activeRole !== 'TERAPEUTA'}
         onOpenProntuario={(patientId) => {
-          const patient = patients.find((item) => item.id === patientId);
+          const patient = visiblePatients.find((item) => item.id === patientId);
           if (patient) onOpenProntuario(patient);
         }}
         onOpenAgenda={(patientId) => {
-          const patient = patients.find((item) => item.id === patientId);
+          const patient = visiblePatients.find((item) => item.id === patientId);
           if (patient) onOpenAgenda(patient);
         }}
       />

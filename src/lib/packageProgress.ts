@@ -57,8 +57,9 @@ export function packageOverview(
         packageId: pkg.id ?? '',
         patientId: pkg.patientId,
         patientName: patient.name,
-        therapistId: patient.therapistId ?? '',
-        therapistName: patient.therapistName || 'Sem terapeuta',
+        // Pacote novo é de um terapeuta; o antigo cai no terapeuta do paciente.
+        therapistId: pkg.therapistId || patient.therapistId || '',
+        therapistName: (pkg.therapistId ? pkg.therapistName : patient.therapistName) || 'Sem terapeuta',
         used: progress.used,
         total: progress.total,
         remaining: progress.remaining,

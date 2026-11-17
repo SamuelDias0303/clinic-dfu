@@ -2,12 +2,17 @@ import { useEffect, useState } from 'react';
 import { Package as PackageIcon, Plus, Loader2 } from 'lucide-react';
 import { Appointment, Package } from '../types';
 import { packageService } from '../services/packageService';
+import { therapistService, Therapist } from '../services/therapistService';
 import { packageProgress } from '../lib/packageProgress';
+import { packagesForTherapist } from '../lib/sharing';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function PatientPackagesCard({ patientId }: { patientId: string }) {
+// patientWhitelabelId: whitelabel de origem do paciente, quando ele é compartilhado.
+export default function PatientPackagesCard({ patientId, patientWhitelabelId }: { patientId: string; patientWhitelabelId?: string }) {
   const { user } = useAuth();
-  const [packages, setPackages] = useState<Package[]>([]);
+  const [allPackages, setPackages] = useState<Package[]>([]);
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [chosenTherapistId, setChosenTherapistId] = useState('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [totalSessions, setTotalSessions] = useState('');
@@ -20,11 +25,17 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
   useEffect(() => {
     const unsubPackages = packageService.subscribeToPatientPackages(patientId, setPackages, whitelabelId);
     const unsubAppointments = packageService.subscribeToPatientAppointments(patientId, setAppointments, therapistId, whitelabelId);
+    // Quem não é terapeuta escolhe de qual terapeuta é o pacote.
+    const unsubTherapists = therapistId ? () => {} : therapistService.subscribeToTherapists(setTherapists, whitelabelId);
     return () => {
       unsubPackages();
       unsubAppointments();
+      unsubTherapists();
     };
   }, [patientId, whitelabelId, therapistId]);
+
+  // Terapeuta vê só os pacotes dele (e os antigos, sem terapeuta); gestor e recepção veem todos.
+  const packages = therapistId ? packagesForTherapist(allPackages, therapistId) : allPackages;
 
   const handleCreate = async () => {
     const total = Number(totalSessions);
@@ -34,9 +45,17 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
     }
     if (!user) return;
 
+    const owner = therapistId
+      ? { therapistId, therapistName: user.name }
+      : therapists.filter((item) => item.id === chosenTherapistId).map((item) => ({ therapistId: item.id, therapistName: item.name }))[0];
+    if (!owner) {
+      alert('Escolha o terapeuta do pacote.');
+      return;
+    }
+
     setSaving(true);
     try {
-      await packageService.createPackage({ patientId, totalSessions: total, createdBy: user.email }, whitelabelId);
+      await packageService.createPackage({ patientId, totalSessions: total, createdBy: user.email, ...owner, patientWhitelabelId }, whitelabelId);
       setTotalSessions('');
       setShowForm(false);
     } catch (error) {
@@ -91,6 +110,22 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
               className="w-32 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
+          {!therapistId && (
+            <div>
+              <label htmlFor="package-therapist" className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">
+                Terapeuta
+              </label>
+              <select
+                id="package-therapist"
+                value={chosenTherapistId}
+                onChange={(event) => setChosenTherapistId(event.target.value)}
+                className="w-56 px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              >
+                <option value="">Escolha...</option>
+                {therapists.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+              </select>
+            </div>
+          )}
           <button
             onClick={handleCreate}
             disabled={saving}
@@ -127,6 +162,9 @@ export default function PatientPackagesCard({ patientId }: { patientId: string }
                       <span className="ml-2 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase rounded-full">
                         {stateLabel}
                       </span>
+                    )}
+                    {pkg.therapistName && (
+                      <span className="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{pkg.therapistName}</span>
                     )}
                   </p>
                   {pkg.status === 'ATIVO' && pkg.id && (
